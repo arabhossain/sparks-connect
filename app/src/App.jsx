@@ -4,7 +4,9 @@ import HostModal from "./components/HostModal";
 import TerminalView from "./components/TerminalView";
 import Tabs from "./components/Tabs";
 import { invoke } from "@tauri-apps/api/core";
+import { Toaster, toast } from "react-hot-toast";
 import "./styles/tabs.css";
+
 const API = "http://localhost:4000";
 
 export default function App() {
@@ -25,13 +27,18 @@ export default function App() {
         localStorage.getItem("username")
     );
 
-    // ================= GLOBAL =================
+    const notify = {
+        success: (msg) => toast.success(msg),
+        error: (msg) => toast.error(msg),
+        loading: (msg) => toast.loading(msg),
+        dismiss: (id) => toast.dismiss(id)
+    };
+
     useEffect(() => {
         document.body.style.margin = "0";
         document.body.style.background = "#000";
     }, []);
 
-    // ================= LOAD SESSIONS =================
     useEffect(() => {
         const saved = localStorage.getItem("sessions");
         if (saved) {
@@ -45,8 +52,9 @@ export default function App() {
         localStorage.setItem("sessions", JSON.stringify(sessions));
     }, [sessions]);
 
-    // ================= RECONNECT =================
     useEffect(() => {
+        if (!sessions.length || !hosts.length) return;
+
         sessions.forEach(async (s) => {
             try {
                 setSessions(prev =>
@@ -59,21 +67,30 @@ export default function App() {
 
                 const host = s.host;
 
-                if (host.authType === "sshKey") {
-                    await invoke("ssh_connect_key", {
-                        sessionId: s.id,
-                        host: host.host,
-                        user: host.user,
-                        privateKey: host.sshKey,
-                    });
-                } else {
-                    await invoke("ssh_connect", {
-                        sessionId: s.id,
-                        host: host.host,
-                        user: host.user,
-                        password: host.password,
-                    });
+                let jumpHost = null;
+
+                if (host.jumpHostId) {
+                    const jh = hosts.find(h => h.id === host.jumpHostId);
+                    if (jh) {
+                        jumpHost = {
+                            host: jh.host,
+                            user: jh.user,
+                            password: jh.password || null,
+                            private_key: jh.sshKey || null,
+                            passphrase: jh.passphrase || null
+                        };
+                    }
                 }
+
+                await invoke("ssh_connect", {
+                    sessionId: s.id,
+                    host: host.host,
+                    user: host.user,
+                    password: host.password || null,
+                    privateKey: host.sshKey || null,
+                    passphrase: host.passphrase || null,
+                    jumpHost
+                });
 
                 setSessions(prev =>
                     prev.map(sess =>
@@ -83,7 +100,7 @@ export default function App() {
                     )
                 );
 
-            } catch (err) {
+            } catch {
                 setSessions(prev =>
                     prev.map(sess =>
                         sess.id === s.id
@@ -93,27 +110,39 @@ export default function App() {
                 );
             }
         });
-    }, []);
+    }, [hosts]);
 
-    // ================= AUTH =================
     const handleAuth = async () => {
-        const endpoint = mode === "login" ? "/auth/login" : "/auth/register";
+        const loadingToast = notify.loading(
+            mode === "login" ? "Logging in..." : "Registering..."
+        );
 
-        const res = await fetch(API + endpoint, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, password }),
-        });
+        try {
+            const endpoint = mode === "login" ? "/auth/login" : "/auth/register";
 
-        const data = await res.json();
+            const res = await fetch(API + endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password }),
+            });
 
-        if (mode === "login") {
-            localStorage.setItem("token", data.token);
-            localStorage.setItem("username", username);
-            setToken(data.token);
-        } else {
-            alert("Registered successfully");
-            setMode("login");
+            const data = await res.json();
+
+            notify.dismiss(loadingToast);
+
+            if (mode === "login") {
+                localStorage.setItem("token", data.token);
+                localStorage.setItem("username", username);
+                setToken(data.token);
+
+                notify.success("Login successful");
+            } else {
+                notify.success("Registered successfully");
+                setMode("login");
+            }
+        } catch (err) {
+            notify.dismiss(loadingToast);
+            notify.error("Authentication failed");
         }
     };
 
@@ -125,7 +154,6 @@ export default function App() {
         setCurrentUser(null);
     };
 
-    // ================= HOSTS =================
     const fetchHosts = async () => {
         const res = await fetch(API + "/hosts", {
             headers: { Authorization: "Bearer " + token }
@@ -139,27 +167,53 @@ export default function App() {
     }, [token]);
 
     const saveHost = async (host) => {
-        const url = editingHost
-            ? `${API}/hosts/${editingHost.id}`
-            : `${API}/hosts`;
+        const loadingToast = notify.loading("Saving host...");
 
-        await fetch(url, {
-            method: editingHost ? "PUT" : "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: "Bearer " + token,
-            },
-            body: JSON.stringify(host),
-        });
+        try {
+            const url = editingHost
+                ? `${API}/hosts/${editingHost.id}`
+                : `${API}/hosts`;
 
-        setModalOpen(false);
-        setEditingHost(null);
-        fetchHosts();
+            await fetch(url, {
+                method: editingHost ? "PUT" : "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: "Bearer " + token,
+                },
+                body: JSON.stringify(host),
+            });
+
+            notify.dismiss(loadingToast);
+            notify.success("Host saved");
+
+            setModalOpen(false);
+            setEditingHost(null);
+            fetchHosts();
+        } catch {
+            notify.dismiss(loadingToast);
+            notify.error("Failed to save host");
+        }
     };
 
-    // ================= SSH =================
+    const buildJumpHost = (host) => {
+        if (!host.jumpHostId) return null;
+
+        const jh = hosts.find(h => h.id === host.jumpHostId);
+        if (!jh) return null;
+
+        return {
+            host: jh.host,
+            user: jh.user,
+            password: jh.password || null,
+            private_key: jh.sshKey || null,
+            passphrase: jh.passphrase || null
+        };
+    };
+
     const openSession = async (host) => {
         const id = crypto.randomUUID();
+
+        const loadingToast = notify.loading(`Connecting to ${host.host}...`);
 
         const newSession = {
             id,
@@ -172,21 +226,18 @@ export default function App() {
         setActiveSession(id);
 
         try {
-            if (host.authType === "sshKey") {
-                await invoke("ssh_connect_key", {
-                    sessionId: id,
-                    host: host.host,
-                    user: host.user,
-                    privateKey: host.sshKey,
-                });
-            } else {
-                await invoke("ssh_connect", {
-                    sessionId: id,
-                    host: host.host,
-                    user: host.user,
-                    password: host.password,
-                });
-            }
+            await invoke("ssh_connect", {
+                sessionId: id,
+                host: host.host,
+                user: host.user,
+                password: host.password || null,
+                privateKey: host.sshKey || null,
+                passphrase: host.passphrase || null,
+                jumpHost: buildJumpHost(host)
+            });
+
+            notify.dismiss(loadingToast);
+            notify.success(`Connected to ${host.host}`);
 
             setSessions(prev =>
                 prev.map(s =>
@@ -197,6 +248,17 @@ export default function App() {
             );
 
         } catch (err) {
+            notify.dismiss(loadingToast);
+            notify.error(`Failed to connect: ${host.host}`);
+
+            setSessions(prev =>
+                prev.map(s =>
+                    s.id === id
+                        ? { ...s, connected: false, reconnecting: false }
+                        : s
+                )
+            );
+
             console.error(err);
         }
     };
@@ -204,7 +266,10 @@ export default function App() {
     const closeSession = async (sessionId) => {
         try {
             await invoke("ssh_disconnect", { sessionId });
-        } catch {}
+            notify.success("Session closed");
+        } catch {
+            notify.error("Failed to close session");
+        }
 
         setSessions(prev => {
             const updated = prev.filter(s => s.id !== sessionId);
@@ -215,7 +280,6 @@ export default function App() {
         });
     };
 
-    // ================= LOGIN UI =================
     if (!token) {
         return (
             <div style={{
@@ -230,14 +294,18 @@ export default function App() {
             }}>
                 <h2>{mode}</h2>
 
-                <input placeholder="Username"
-                       value={username}
-                       onChange={e => setUsername(e.target.value)} />
+                <input
+                    placeholder="Username"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                />
 
-                <input type="password"
-                       placeholder="Password"
-                       value={password}
-                       onChange={e => setPassword(e.target.value)} />
+                <input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                />
 
                 <button onClick={handleAuth}>Submit</button>
 
@@ -250,8 +318,9 @@ export default function App() {
         );
     }
 
-    // ================= MAIN =================
     return (
+        <>
+        <Toaster position="top-right" reverseOrder={false} />
         <div style={{ display: "flex", height: "100vh", background: "#000" }}>
 
             <Sidebar
@@ -297,11 +366,12 @@ export default function App() {
             {modalOpen && (
                 <HostModal
                     host={editingHost}
-                    hosts={hosts}   // 👈 ADD THIS
+                    hosts={hosts}
                     onClose={() => setModalOpen(false)}
                     onSave={saveHost}
                 />
             )}
         </div>
+        </>
     );
 }

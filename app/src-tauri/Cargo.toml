@@ -27,3 +27,4 @@ log = "0.4"
 
 ssh2 = "0.9"
 once_cell = "1.19"
+portable-pty = "0.8"
