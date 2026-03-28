@@ -196,13 +196,101 @@ fn ssh_disconnect(session_id: String) {
         let _ = child.kill();
     }
 }
+#[derive(serde::Serialize)]
+struct SSHKey {
+    name: String,
+    path: String,
+    content: String,
+}
+
+#[derive(serde::Serialize)]
+struct SSHHostConfig {
+    host: String,
+    hostname: Option<String>,
+    user: Option<String>,
+    identity_file: Option<String>,
+}
+
+#[tauri::command]
+fn scan_ssh() -> Result<(Vec<SSHKey>, Vec<SSHHostConfig>), String> {
+    let home = std::env::var("HOME").map_err(|e| e.to_string())?;
+    let ssh_path = format!("{}/.ssh", home);
+
+    let mut keys = vec![];
+    let mut hosts = vec![];
+
+    // ===== SCAN KEYS =====
+    if let Ok(entries) = std::fs::read_dir(&ssh_path) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+
+            if path.is_file() {
+                let filename = path.file_name().unwrap().to_string_lossy();
+
+                if let Ok(content) = std::fs::read_to_string(&path) {
+                    if content.contains("PRIVATE KEY") {
+                        keys.push(SSHKey {
+                            name: filename.to_string(),
+                            path: path.to_string_lossy().to_string(),
+                            content,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    // ===== PARSE SSH CONFIG =====
+    let config_path = format!("{}/config", ssh_path);
+
+    if let Ok(config) = std::fs::read_to_string(config_path) {
+        let mut current: Option<SSHHostConfig> = None;
+
+        for line in config.lines() {
+            let line = line.trim();
+
+            if line.starts_with("Host ") {
+                if let Some(h) = current.take() {
+                    hosts.push(h);
+                }
+
+                current = Some(SSHHostConfig {
+                    host: line.replace("Host ", "").trim().to_string(),
+                    hostname: None,
+                    user: None,
+                    identity_file: None,
+                });
+            }
+
+            if let Some(ref mut h) = current {
+                if line.starts_with("HostName ") {
+                    h.hostname = Some(line.replace("HostName ", "").trim().to_string());
+                }
+                if line.starts_with("User ") {
+                    h.user = Some(line.replace("User ", "").trim().to_string());
+                }
+                if line.starts_with("IdentityFile ") {
+                    h.identity_file =
+                        Some(line.replace("IdentityFile ", "").trim().to_string());
+                }
+            }
+        }
+
+        if let Some(h) = current {
+            hosts.push(h);
+        }
+    }
+
+    Ok((keys, hosts))
+}
 
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             ssh_connect,
             ssh_write,
-            ssh_disconnect
+            ssh_disconnect,
+            scan_ssh
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri app");

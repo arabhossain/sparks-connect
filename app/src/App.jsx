@@ -37,6 +37,14 @@ export default function App() {
     useEffect(() => {
         document.body.style.margin = "0";
         document.body.style.background = "#000";
+        document.body.style.overflow = "hidden";
+        const disableRightClick = (e) => e.preventDefault();
+        document.addEventListener("contextmenu", disableRightClick);
+
+        return () => {
+            document.removeEventListener("contextmenu", disableRightClick);
+        };
+
     }, []);
 
     useEffect(() => {
@@ -280,11 +288,83 @@ export default function App() {
         });
     };
 
+    const importSSH = async () => {
+        const loading = notify.loading("Scanning ~/.ssh...");
+
+        try {
+            const [keys, hostsFromSSH] = await invoke("scan_ssh");
+
+            let added = 0;
+
+            for (const h of hostsFromSSH) {
+                const host = h.hostname || h.host;
+                const user = h.user || "root";
+
+                // 🔍 skip duplicates
+                const exists = hosts.some(existing =>
+                    existing.host === host &&
+                    existing.user === user
+                );
+
+                if (exists) continue;
+
+                // ✅ save to DB
+                await fetch(`${API}/hosts`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: "Bearer " + token,
+                    },
+                    body: JSON.stringify({
+                        name: h.host,
+                        host,
+                        user,
+                        sshKey: null,
+                    }),
+                });
+
+                added++;
+            }
+
+            notify.dismiss(loading);
+            notify.success(`Imported ${added} hosts`);
+
+            // refresh from DB
+            fetchHosts();
+
+        } catch (err) {
+            notify.dismiss(loading);
+            notify.error("Failed to import SSH config");
+            console.error(err);
+        }
+    };
+
+    const deleteHost = async (host) => {
+        const confirm = window.confirm(`Delete ${host.name}?`);
+        if (!confirm) return;
+
+        try {
+            await fetch(`${API}/hosts/${host.id}`, {
+                method: "DELETE",
+                headers: {
+                    Authorization: "Bearer " + token
+                }
+            });
+
+            notify.success("Host deleted");
+            fetchHosts();
+
+        } catch {
+            notify.error("Failed to delete host");
+        }
+    };
+
     if (!token) {
         return (
             <div style={{
                 display: "flex",
                 height: "100vh",
+                overflow: "hidden",
                 justifyContent: "center",
                 alignItems: "center",
                 flexDirection: "column",
@@ -335,9 +415,11 @@ export default function App() {
                     setModalOpen(true);
                 }}
                 onLogout={logout}
+                importSSH={importSSH}
+                onDelete={deleteHost}
             />
 
-            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "hidden" }}>
 
                 <Tabs
                     sessions={sessions}
@@ -347,7 +429,7 @@ export default function App() {
                     onClose={closeSession}
                 />
 
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1 , overflow: "hidden"}}>
                     {sessions.map(s => (
                         <div
                             key={s.id}

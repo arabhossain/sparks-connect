@@ -32,7 +32,7 @@ export default function HostModal({ host, hosts = [], onClose, onSave }) {
 
     // styles
     const inputStyle = {
-        width: "100%",
+        width: "95%",
         padding: "10px",
         marginBottom: "10px",
         borderRadius: "6px",
@@ -45,7 +45,8 @@ export default function HostModal({ host, hosts = [], onClose, onSave }) {
     const selectStyle = {
         ...inputStyle,
         appearance: "none",
-        cursor: "pointer"
+        cursor: "pointer",
+        width: "100%"
     };
 
     const sectionStyle = {
@@ -66,7 +67,6 @@ export default function HostModal({ host, hosts = [], onClose, onSave }) {
             borderRadius: "10px",
             width: "440px",
             maxHeight: "85vh",
-            overflowY: "auto",
             boxShadow: "0 0 25px rgba(0,0,0,0.7)"
         }}>
 

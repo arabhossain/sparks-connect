@@ -168,4 +168,36 @@ router.put("/:id", auth, async (req, res) => {
     }
 });
 
+router.delete("/:id", auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const [result] = await db.query(
+            "DELETE FROM hosts WHERE id = ?",
+            [id]
+        );
+
+        // 🔍 Check if anything was deleted
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Host not found"
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: "Host deleted successfully"
+        });
+
+    } catch (err) {
+        console.error("Delete host error:", err);
+
+        return res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+});
+
 module.exports = router;
