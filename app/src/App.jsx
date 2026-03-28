@@ -297,6 +297,7 @@ export default function App() {
             {modalOpen && (
                 <HostModal
                     host={editingHost}
+                    hosts={hosts}   // 👈 ADD THIS
                     onClose={() => setModalOpen(false)}
                     onSave={saveHost}
                 />

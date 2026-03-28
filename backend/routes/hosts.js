@@ -6,30 +6,41 @@ const { encrypt, decrypt } = require("../utils/crypto");
 
 const router = express.Router();
 
-// GET HOSTS (owned + shared)
 router.get("/", auth, async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const [hosts] = await db.query(`
-            SELECT * FROM hosts
-            WHERE ownerId = ? OR isShared = 1
-        `, [userId]);
+        const [hosts] = await db.query(
+            "SELECT * FROM hosts WHERE ownerId = ? OR isShared = 1",
+            [userId]
+        );
 
         const result = [];
 
         for (const host of hosts) {
-            const [tags] = await db.query(`
-                SELECT t.name FROM tags t
-                JOIN host_tags ht ON t.id = ht.tagId
-                WHERE ht.hostId = ?
-            `, [host.id]);
+            const [tags] = await db.query(
+                `SELECT t.name FROM tags t
+                                        JOIN host_tags ht ON t.id = ht.tagId
+                 WHERE ht.hostId = ?`,
+                [host.id]
+            );
+
+            let jumpHost = null;
+            if (host.jumpHostId) {
+                const [jump] = await db.query(
+                    "SELECT id, name, host, user FROM hosts WHERE id = ?",
+                    [host.jumpHostId]
+                );
+                if (jump.length) jumpHost = jump[0];
+            }
 
             result.push({
                 ...host,
                 password: host.passwordEnc ? decrypt(host.passwordEnc) : null,
                 sshKey: host.sshKeyEnc ? decrypt(host.sshKeyEnc) : null,
-                tags: tags.map(t => t.name)
+                passphrase: host.passphraseEnc ? decrypt(host.passphraseEnc) : null,
+                tags: tags.map(t => t.name),
+                jumpHost
             });
         }
 
@@ -39,7 +50,6 @@ router.get("/", auth, async (req, res) => {
     }
 });
 
-// CREATE HOST
 router.post("/", auth, async (req, res) => {
     try {
         const userId = req.user.id;
@@ -51,17 +61,19 @@ router.post("/", auth, async (req, res) => {
             authType,
             password,
             sshKey,
+            passphrase,
             description,
             tags = [],
-            isShared = false
+            isShared = false,
+            jumpHostId = null
         } = req.body;
 
         const id = crypto.randomUUID();
 
         await db.query(
             `INSERT INTO hosts
-            (id, name, host, user, authType, passwordEnc, sshKeyEnc, description, ownerId, isShared)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             (id, name, host, user, authType, passwordEnc, sshKeyEnc, passphraseEnc, description, ownerId, isShared, jumpHostId)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 id,
                 name,
@@ -70,13 +82,14 @@ router.post("/", auth, async (req, res) => {
                 authType,
                 password ? encrypt(password) : null,
                 sshKey ? encrypt(sshKey) : null,
+                passphrase ? encrypt(passphrase) : null,
                 description,
                 userId,
-                isShared ? 1 : 0
+                isShared ? 1 : 0,
+                jumpHostId || null
             ]
         );
 
-        // TAGS
         for (const tag of tags) {
             const tagId = crypto.randomUUID();
 
@@ -104,7 +117,6 @@ router.post("/", auth, async (req, res) => {
     }
 });
 
-// UPDATE HOST
 router.put("/:id", auth, async (req, res) => {
     try {
         const { id } = req.params;
@@ -116,20 +128,24 @@ router.put("/:id", auth, async (req, res) => {
             authType,
             password,
             sshKey,
+            passphrase,
             description,
-            isShared
+            isShared,
+            jumpHostId = null
         } = req.body;
 
         await db.query(
             `UPDATE hosts SET
-                name=?,
-                host=?,
-                user=?,
-                authType=?,
-                passwordEnc=?,
-                sshKeyEnc=?,
-                description=?,
-                isShared=?
+                              name=?,
+                              host=?,
+                              user=?,
+                              authType=?,
+                              passwordEnc=?,
+                              sshKeyEnc=?,
+                              passphraseEnc=?,
+                              description=?,
+                              isShared=?,
+                              jumpHostId=?
              WHERE id=?`,
             [
                 name,
@@ -138,8 +154,10 @@ router.put("/:id", auth, async (req, res) => {
                 authType,
                 password ? encrypt(password) : null,
                 sshKey ? encrypt(sshKey) : null,
+                passphrase ? encrypt(passphrase) : null,
                 description,
                 isShared ? 1 : 0,
+                jumpHostId || null,
                 id
             ]
         );
