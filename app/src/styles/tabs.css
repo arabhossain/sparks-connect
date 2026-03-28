@@ -1,0 +1,78 @@
+.tab-wrapper {
+    width: 100%;
+    background: #0f0f0f;
+}
+
+.tab-bar {
+    display: flex;
+    align-items: center;
+    background: #111;
+    padding: 6px;
+    gap: 6px;
+}
+
+/* Tab */
+.tab-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: #1a1a1a;
+    color: #fff;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Active tab */
+.tab-item.active {
+    background: #2a2a2a;
+    box-shadow: 0 0 0 1px #444;
+}
+
+/* Drag handle */
+.drag-handle {
+    cursor: grab;
+    opacity: 0.6;
+}
+
+/* Status dot */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+/* Close button */
+.close-btn {
+    margin-left: 6px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.tab-item:hover .close-btn {
+    opacity: 1;
+}
+
+/* Drag preview */
+.drag-preview {
+    padding: 6px 10px;
+    background: #222;
+    color: #fff;
+    border-radius: 6px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+/* Spinner */
+.spinner {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 2px solid #999;
+    border-top: 2px solid #fff;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

@@ -1,0 +1,153 @@
+const express = require("express");
+const crypto = require("crypto");
+const db = require("../db");
+const auth = require("../middleware/auth");
+const { encrypt, decrypt } = require("../utils/crypto");
+
+const router = express.Router();
+
+// GET HOSTS (owned + shared)
+router.get("/", auth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const [hosts] = await db.query(`
+            SELECT * FROM hosts
+            WHERE ownerId = ? OR isShared = 1
+        `, [userId]);
+
+        const result = [];
+
+        for (const host of hosts) {
+            const [tags] = await db.query(`
+                SELECT t.name FROM tags t
+                JOIN host_tags ht ON t.id = ht.tagId
+                WHERE ht.hostId = ?
+            `, [host.id]);
+
+            result.push({
+                ...host,
+                password: host.passwordEnc ? decrypt(host.passwordEnc) : null,
+                sshKey: host.sshKeyEnc ? decrypt(host.sshKeyEnc) : null,
+                tags: tags.map(t => t.name)
+            });
+        }
+
+        res.json(result);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// CREATE HOST
+router.post("/", auth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const {
+            name,
+            host,
+            user,
+            authType,
+            password,
+            sshKey,
+            description,
+            tags = [],
+            isShared = false
+        } = req.body;
+
+        const id = crypto.randomUUID();
+
+        await db.query(
+            `INSERT INTO hosts
+            (id, name, host, user, authType, passwordEnc, sshKeyEnc, description, ownerId, isShared)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                id,
+                name,
+                host,
+                user,
+                authType,
+                password ? encrypt(password) : null,
+                sshKey ? encrypt(sshKey) : null,
+                description,
+                userId,
+                isShared ? 1 : 0
+            ]
+        );
+
+        // TAGS
+        for (const tag of tags) {
+            const tagId = crypto.randomUUID();
+
+            await db.query(
+                "INSERT IGNORE INTO tags (id, name) VALUES (?, ?)",
+                [tagId, tag]
+            );
+
+            const [t] = await db.query(
+                "SELECT id FROM tags WHERE name = ?",
+                [tag]
+            );
+
+            if (t.length) {
+                await db.query(
+                    "INSERT INTO host_tags (hostId, tagId) VALUES (?, ?)",
+                    [id, t[0].id]
+                );
+            }
+        }
+
+        res.json({ id });
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// UPDATE HOST
+router.put("/:id", auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const {
+            name,
+            host,
+            user,
+            authType,
+            password,
+            sshKey,
+            description,
+            isShared
+        } = req.body;
+
+        await db.query(
+            `UPDATE hosts SET
+                name=?,
+                host=?,
+                user=?,
+                authType=?,
+                passwordEnc=?,
+                sshKeyEnc=?,
+                description=?,
+                isShared=?
+             WHERE id=?`,
+            [
+                name,
+                host,
+                user,
+                authType,
+                password ? encrypt(password) : null,
+                sshKey ? encrypt(sshKey) : null,
+                description,
+                isShared ? 1 : 0,
+                id
+            ]
+        );
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+module.exports = router;
