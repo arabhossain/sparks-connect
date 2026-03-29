@@ -10,6 +10,8 @@ import {
     DragOverlay
 } from "@dnd-kit/core";
 
+import { FiX } from "react-icons/fi";
+
 import {
     arrayMove,
     SortableContext,
@@ -70,6 +72,7 @@ function TabItem({ session, activeSession, onSelect, onClose }) {
             <span
                 className="tab-label"
                 onClick={() => onSelect(session.id)}
+                title={session.host.name}
             >
                 {session.host.name}
             </span>
@@ -82,7 +85,7 @@ function TabItem({ session, activeSession, onSelect, onClose }) {
                     onClose(session.id);
                 }}
             >
-                ✕
+                <FiX size={14} />
             </span>
         </motion.div>
     );
@@ -91,12 +94,12 @@ function TabItem({ session, activeSession, onSelect, onClose }) {
 /* ================= MAIN TABS ================= */
 
 export default function Tabs({
-                                 sessions,
-                                 setSessions,
-                                 activeSession,
-                                 onSelect,
-                                 onClose
-                             }) {
+    sessions,
+    setSessions,
+    activeSession,
+    onSelect,
+    onClose
+}) {
 
     const [activeDragId, setActiveDragId] = useState(null);
 

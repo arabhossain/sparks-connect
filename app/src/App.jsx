@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "./components/Sidebar";
 import HostModal from "./components/HostModal";
 import TerminalView from "./components/TerminalView";
@@ -6,6 +7,9 @@ import Tabs from "./components/Tabs";
 import { invoke } from "@tauri-apps/api/core";
 import { Toaster, toast } from "react-hot-toast";
 import "./styles/tabs.css";
+import "./styles/global.css";
+import "./styles/login.css";
+import { FiTrash2 } from "react-icons/fi";
 
 const API = "https://sparkconnect.codesparks.me";
 
@@ -15,6 +19,38 @@ export default function App() {
 
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+
+    const [sidebarWidth, setSidebarWidth] = useState(300);
+    const [isResizing, setIsResizing] = useState(false);
+
+    const startResizing = (e) => {
+        e.preventDefault();
+        setIsResizing(true);
+    };
+
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            if (!isResizing) return;
+            let newWidth = e.clientX;
+            if (newWidth < 280) newWidth = 280;
+            if (newWidth > 600) newWidth = 600;
+            setSidebarWidth(newWidth);
+        };
+
+        const stopResizing = () => {
+            setIsResizing(false);
+        };
+
+        if (isResizing) {
+            window.addEventListener("mousemove", handleMouseMove);
+            window.addEventListener("mouseup", stopResizing);
+        }
+
+        return () => {
+            window.removeEventListener("mousemove", handleMouseMove);
+            window.removeEventListener("mouseup", stopResizing);
+        };
+    }, [isResizing]);
 
     const [hosts, setHosts] = useState([]);
     const [modalOpen, setModalOpen] = useState(false);
@@ -26,6 +62,7 @@ export default function App() {
     const [currentUser, setCurrentUser] = useState(
         localStorage.getItem("username")
     );
+    const [confirmDelete, setConfirmDelete] = useState(null);
 
     const notify = {
         success: (msg) => toast.success(msg),
@@ -35,9 +72,6 @@ export default function App() {
     };
 
     useEffect(() => {
-        document.body.style.margin = "0";
-        document.body.style.background = "#000";
-        document.body.style.overflow = "hidden";
         const disableRightClick = (e) => e.preventDefault();
         document.addEventListener("contextmenu", disableRightClick);
 
@@ -339,9 +373,16 @@ export default function App() {
         }
     };
 
-    const deleteHost = async (host) => {
-        const confirm = window.confirm(`Delete ${host.name}?`);
-        if (!confirm) return;
+    const deleteHost = (host) => {
+        setConfirmDelete(host);
+    };
+
+    const confirmDeleteAction = async () => {
+        const host = confirmDelete;
+        if (!host) return;
+
+        setConfirmDelete(null);
+        const loadingToast = notify.loading(`Deleting ${host.name}...`);
 
         try {
             await fetch(`${API}/hosts/${host.id}`, {
@@ -351,109 +392,229 @@ export default function App() {
                 }
             });
 
-            notify.success("Host deleted");
+            notify.dismiss(loadingToast);
+            notify.success("Host removed from your network");
             fetchHosts();
 
-        } catch {
+        } catch (err) {
+            notify.dismiss(loadingToast);
             notify.error("Failed to delete host");
+            console.error(err);
         }
     };
 
     if (!token) {
         return (
-            <div style={{
-                display: "flex",
-                height: "100vh",
-                overflow: "hidden",
-                justifyContent: "center",
-                alignItems: "center",
-                flexDirection: "column",
-                background: "#000",
-                color: "#fff",
-                gap: 10
-            }}>
-                <h2>{mode}</h2>
+            <div className="login-container">
+                <div className="background-blur blur-1"></div>
+                <div className="background-blur blur-2"></div>
 
-                <input
-                    placeholder="Username"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="login-card glass-panel"
+                >
+                    <div className="login-header">
+                        <div className="login-logo">SparkConnect</div>
+                        <p>{mode === "login" ? "Welcome back, Commander" : "Join the elite terminal network"}</p>
+                    </div>
+
+                    <div className="login-form">
+                        <div className="form-group">
+                            <label>Username</label>
+                            <input
+                                placeholder="Enter your username"
+                                value={username}
+                                onChange={e => setUsername(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Password</label>
+                            <input
+                                type="password"
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                            />
+                        </div>
+
+                        <button className="btn auth-btn" onClick={handleAuth}>
+                            {mode === "login" ? "Sign In" : "Create Account"}
+                        </button>
+
+                        <button
+                            className="btn switch-btn"
+                            onClick={() => setMode(mode === "login" ? "register" : "login")}
+                        >
+                            {mode === "login"
+                                ? "New here? Create an account"
+                                : "Already have an account? Sign in"}
+                        </button>
+                    </div>
+                </motion.div>
+                <Toaster
+                    position="bottom-center"
+                    toastOptions={{
+                        style: {
+                            background: "var(--surface)",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--border-subtle)",
+                            borderRadius: "12px",
+                            fontSize: "14px",
+                        }
+                    }}
                 />
-
-                <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                />
-
-                <button onClick={handleAuth}>Submit</button>
-
-                <button onClick={() =>
-                    setMode(mode === "login" ? "register" : "login")
-                }>
-                    Switch
-                </button>
             </div>
         );
     }
 
     return (
         <>
-        <Toaster position="top-right" reverseOrder={false} />
-        <div style={{ display: "flex", height: "100vh", background: "#000" }}>
-
-            <Sidebar
-                hosts={hosts}
-                onConnect={openSession}
-                onAdd={() => {
-                    setEditingHost(null);
-                    setModalOpen(true);
+            <Toaster
+                position="bottom-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: "var(--surface)",
+                        color: "var(--text-primary)",
+                        border: "1px solid var(--border-subtle)",
+                        backdropFilter: "blur(12px)",
+                        borderRadius: "12px",
+                        fontSize: "14px",
+                        padding: "16px",
+                        boxShadow: "var(--shadow-lg)",
+                    },
+                    success: {
+                        iconTheme: {
+                            primary: "var(--success)",
+                            secondary: "white",
+                        },
+                    },
+                    error: {
+                        iconTheme: {
+                            primary: "var(--danger)",
+                            secondary: "white",
+                        },
+                    },
                 }}
-                onEdit={(h) => {
-                    setEditingHost(h);
-                    setModalOpen(true);
-                }}
-                onLogout={logout}
-                importSSH={importSSH}
-                onDelete={deleteHost}
             />
-
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "hidden" }}>
-
-                <Tabs
+            <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+                <Sidebar
+                    width={sidebarWidth}
+                    hosts={hosts}
                     sessions={sessions}
-                    setSessions={setSessions}
-                    activeSession={activeSession}
-                    onSelect={setActiveSession}
-                    onClose={closeSession}
+                    onConnect={openSession}
+                    onAdd={() => {
+                        setEditingHost(null);
+                        setModalOpen(true);
+                    }}
+                    onEdit={(h) => {
+                        setEditingHost(h);
+                        setModalOpen(true);
+                    }}
+                    onLogout={logout}
+                    importSSH={importSSH}
+                    onDelete={deleteHost}
                 />
 
-                <div style={{ flex: 1 , overflow: "hidden"}}>
-                    {sessions.map(s => (
-                        <div
-                            key={s.id}
-                            style={{
-                                display: s.id === activeSession ? "block" : "none",
-                                height: "100%"
-                            }}
-                        >
-                            <TerminalView session={s} />
-                        </div>
-                    ))}
+                <div
+                    className="resize-handle"
+                    onMouseDown={startResizing}
+                />
+
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", overflowY: "hidden" }}>
+
+                    <Tabs
+                        sessions={sessions}
+                        setSessions={setSessions}
+                        activeSession={activeSession}
+                        onSelect={setActiveSession}
+                        onClose={closeSession}
+                    />
+
+                    <div style={{ flex: 1, overflow: "hidden" }}>
+                        {sessions.map(s => (
+                            <div
+                                key={s.id}
+                                style={{
+                                    display: s.id === activeSession ? "block" : "none",
+                                    height: "100%"
+                                }}
+                            >
+                                <TerminalView session={s} />
+                            </div>
+                        ))}
+                    </div>
+
                 </div>
 
-            </div>
+                {modalOpen && (
+                    <HostModal
+                        host={editingHost}
+                        hosts={hosts}
+                        onClose={() => setModalOpen(false)}
+                        onSave={saveHost}
+                    />
+                )}
 
-            {modalOpen && (
-                <HostModal
-                    host={editingHost}
-                    hosts={hosts}
-                    onClose={() => setModalOpen(false)}
-                    onSave={saveHost}
-                />
-            )}
-        </div>
+                <AnimatePresence>
+                    {confirmDelete && (
+                        <div className="modal-overlay">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                                className="modal-content glass-panel"
+                                style={{ maxWidth: "400px", textAlign: "center" }}
+                            >
+                                <div style={{
+                                    background: "rgba(239, 68, 68, 0.1)",
+                                    color: "var(--danger)",
+                                    width: "64px",
+                                    height: "64px",
+                                    borderRadius: "16px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    margin: "0 auto 24px auto",
+                                    boxShadow: "0 0 20px rgba(239, 68, 68, 0.2)"
+                                }}>
+                                    <FiTrash2 size={32} />
+                                </div>
+                                <h3 style={{ fontSize: "20px", fontWeight: "700", marginBottom: "12px", color: "var(--text-primary)" }}>Delete Server?</h3>
+                                <p style={{ color: "var(--text-secondary)", marginBottom: "32px", fontSize: "14px", lineHeight: "1.6" }}>
+                                    Are you sure you want to remove <span style={{ color: "var(--text-primary)", fontWeight: "600" }}>{confirmDelete.name}</span>?<br />
+                                    This will permanently delete the host configuration.
+                                </p>
+                                <div style={{ display: "flex", gap: "12px" }}>
+                                    <button
+                                        className="btn secondary-btn"
+                                        style={{ flex: 1, padding: "12px", fontWeight: "600" }}
+                                        onClick={() => setConfirmDelete(null)}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        className="btn primary-btn"
+                                        style={{
+                                            flex: 1,
+                                            padding: "12px",
+                                            fontWeight: "600",
+                                            background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                                            border: "none",
+                                            boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)"
+                                        }}
+                                        onClick={confirmDeleteAction}
+                                    >
+                                        Delete Host
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+            </div>
         </>
     );
 }

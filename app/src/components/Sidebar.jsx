@@ -1,15 +1,19 @@
 import { useState } from "react";
-import { FiSearch, FiPlus, FiTrash2, FiEdit2, FiTerminal, FiKey } from "react-icons/fi";
+import { FiSearch, FiPlus, FiTrash2, FiEdit2, FiTerminal, FiKey, FiUser } from "react-icons/fi";
+import { motion, AnimatePresence } from "framer-motion";
+import "../styles/sidebar.css";
 
 export default function Sidebar({
-                                    hosts,
-                                    onConnect,
-                                    onAdd,
-                                    onEdit,
-                                    onDelete,
-                                    onLogout,
-                                    importSSH
-                                }) {
+    width = 280,
+    hosts,
+    sessions = [],
+    onConnect,
+    onAdd,
+    onEdit,
+    onDelete,
+    onLogout,
+    importSSH
+}) {
     const [search, setSearch] = useState("");
     const username = localStorage.getItem("username");
 
@@ -18,203 +22,101 @@ export default function Sidebar({
         h.host.includes(search)
     );
 
+    // Check if a host has an active, connected session
+    const getStatus = (host) => {
+        const session = sessions.find(s => s.host.id === host.id);
+        if (!session) return "offline";
+        return session.connected ? "connected" : "error";
+    };
+
     return (
-        <div style={container}>
+        <div className="sidebar-container glass-panel" style={{ width: width }}>
             {/* HEADER */}
-            <div>
-                <h3 style={{ marginBottom: 8 }}>Hosts</h3>
+            <div className="sidebar-header">
+                <h3>Hosts</h3>
 
                 {/* SEARCH */}
-                <div style={searchBox}>
-                    <FiSearch size={14} />
+                <div className="search-container">
+                    <FiSearch size={14} color="var(--text-muted)" />
                     <input
-                        placeholder="Search..."
+                        placeholder="Search servers..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        style={searchInput}
+                        className="search-input"
                     />
                 </div>
 
                 {/* ACTIONS */}
-                <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
-                    <button onClick={onAdd} style={primaryBtn}>
-                        <FiPlus size={14} /> Add
+                <div className="sidebar-actions">
+                    <button onClick={onAdd} className="sidebar-btn primary-btn">
+                        <FiPlus size={16} /> New Host
                     </button>
 
-                    <button onClick={importSSH} style={ghostBtn}>
-                        <FiKey size={14} /> Import
+                    <button onClick={importSSH} className="sidebar-btn secondary-btn">
+                        <FiKey size={16} /> Import
                     </button>
                 </div>
             </div>
 
             {/* HOST LIST */}
-            <div style={list}>
-                {filtered.map((h) => (
-                    <div
-                        key={h.id}
-                        style={card}
-                        onDoubleClick={() => onConnect(h)}
-                    >
-                        <div style={title}>{h.name}</div>
-                        <div style={subtitle}>{h.user}@{h.host}</div>
+            <div className="host-list">
+                <AnimatePresence>
+                    {filtered.map((h, index) => {
+                        const status = getStatus(h);
 
-                        <div style={actions}>
-                            <IconBtn onClick={() => onConnect(h)}>
-                                <FiTerminal />
-                            </IconBtn>
+                        return (
+                            <motion.div
+                                key={h.id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ delay: index * 0.05 }}
+                                className="host-card glow-border"
+                                onDoubleClick={() => onConnect(h)}
+                            >
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "100%" }}>
+                                    <div style={{ color: "var(--primary)", opacity: 0.8, display: "flex" }}>
+                                        <FiTerminal size={20} />
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                            <div className="host-name">{h.name}</div>
+                                            <div className={`status-dot-indicator ${status}`} title={status}></div>
+                                        </div>
+                                        <div className="host-details">{h.user}@{h.host}</div>
+                                    </div>
+                                </div>
 
-                            <IconBtn onClick={() => onEdit(h)}>
-                                <FiEdit2 />
-                            </IconBtn>
+                                <div className="card-actions">
+                                    <button className="icon-btn" title="Connect" onClick={(e) => { e.stopPropagation(); onConnect(h); }}>
+                                        <FiTerminal size={14} />
+                                    </button>
 
-                            <IconBtn danger onClick={() => onDelete(h)}>
-                                <FiTrash2 />
-                            </IconBtn>
-                        </div>
-                    </div>
-                ))}
+                                    <button className="icon-btn" title="Edit" onClick={(e) => { e.stopPropagation(); onEdit(h); }}>
+                                        <FiEdit2 size={14} />
+                                    </button>
+
+                                    <button className="icon-btn danger" title="Delete" onClick={(e) => { e.stopPropagation(); onDelete(h); }}>
+                                        <FiTrash2 size={14} />
+                                    </button>
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </AnimatePresence>
             </div>
 
             {/* FOOTER */}
-            <div style={footer}>
-                <div style={{ fontSize: 12, opacity: 0.7 }}>
-                    👤 {username}
+            <div className="sidebar-footer">
+                <div className="user-info">
+                    <FiUser size={16} />
+                    <span>{username}</span>
                 </div>
 
-                <button onClick={onLogout} style={logoutBtn}>
+                <button onClick={onLogout} className="logout-btn">
                     Logout
                 </button>
             </div>
         </div>
     );
 }
-
-/* ---------- UI STYLES ---------- */
-
-const container = {
-    width: 260,
-    background: "#0d1117",
-    color: "#fff",
-    padding: 12,
-    display: "flex",
-    flexDirection: "column",
-    borderRight: "1px solid #111"
-};
-
-const searchBox = {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    background: "#111",
-    border: "1px solid #222",
-    padding: "4px 6px",
-    borderRadius: 6
-};
-
-const searchInput = {
-    background: "transparent",
-    border: "none",
-    outline: "none",
-    color: "#fff",
-    width: "100%",
-    fontSize: 12
-};
-
-const primaryBtn = {
-    flex: 1,
-    padding: 6,
-    background: "#238636",
-    border: "none",
-    color: "#fff",
-    borderRadius: 6,
-    cursor: "pointer",
-    fontSize: 12,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4
-};
-
-const ghostBtn = {
-    flex: 1,
-    padding: 6,
-    background: "#161b22",
-    border: "1px solid #333",
-    color: "#ccc",
-    borderRadius: 6,
-    cursor: "pointer",
-    fontSize: 12,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4
-};
-
-const list = {
-    flex: 1,
-    overflowY: "auto",
-    marginTop: 12,
-    minHeight: 0,
-};
-
-const card = {
-    border: "1px solid #222",
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 8,
-    background: "#111",
-    transition: "0.2s",
-};
-
-const title = {
-    fontWeight: "bold",
-    fontSize: 13
-};
-
-const subtitle = {
-    fontSize: 11,
-    opacity: 0.6,
-    marginTop: 2
-};
-
-const actions = {
-    display: "flex",
-    gap: 6,
-    marginTop: 8
-};
-
-const IconBtn = ({ children, onClick, danger }) => (
-    <button
-        onClick={onClick}
-        style={{
-            flex: 1,
-            padding: 5,
-            background: danger ? "#2d1111" : "#161b22",
-            border: "1px solid #333",
-            color: danger ? "#ff6b6b" : "#ccc",
-            borderRadius: 6,
-            cursor: "pointer",
-        }}
-    >
-        {children}
-    </button>
-);
-
-const footer = {
-    borderTop: "1px solid #222",
-    paddingTop: 10,
-    marginTop: 10,
-    display: "flex",
-    flexDirection: "column",
-    gap: 6
-};
-
-const logoutBtn = {
-    padding: 6,
-    background: "#da3633",
-    border: "none",
-    color: "#fff",
-    borderRadius: 6,
-    cursor: "pointer",
-    fontSize: 12
-};

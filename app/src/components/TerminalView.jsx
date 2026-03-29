@@ -4,6 +4,8 @@ import { FitAddon } from "xterm-addon-fit";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import "xterm/css/xterm.css";
+import "../styles/terminal.css";
+import { FiCopy, FiClipboard } from "react-icons/fi";
 
 export default function TerminalView({ session }) {
     const ref = useRef(null);
@@ -18,8 +20,20 @@ export default function TerminalView({ session }) {
             cursorBlink: true,
             convertEol: true,
             fontSize: 14,
+            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
             theme: {
-                background: "#000000",
+                background: "#0a0b10", // Match var(--bg-primary)
+                foreground: "#f8fafc", // Match var(--text-primary)
+                cursor: "#3b82f6",     // Match var(--primary)
+                selection: "rgba(59, 130, 246, 0.3)",
+                black: "#1e293b",
+                red: "#ef4444",
+                green: "#10b981",
+                yellow: "#f59e0b",
+                blue: "#3b82f6",
+                magenta: "#8b5cf6",
+                cyan: "#06b6d4",
+                white: "#f8fafc",
             },
         });
 
@@ -101,7 +115,7 @@ export default function TerminalView({ session }) {
         closeMenu();
     };
 
-    // Close menu on outside click (mousedown for responsiveness)
+    // Close menu on outside click
     useEffect(() => {
         const handleClick = () => closeMenu();
 
@@ -113,7 +127,6 @@ export default function TerminalView({ session }) {
     // Middle Mouse Paste Support
     // ---------------------------
     const handleMouseDown = async (e) => {
-        // Middle mouse button
         if (e.button === 1) {
             e.preventDefault();
 
@@ -130,7 +143,7 @@ export default function TerminalView({ session }) {
 
     return (
         <div
-            style={{ width: "100%", height: "100%", position: "relative" }}
+            className="terminal-container"
             onContextMenu={handleContextMenu}
             onMouseDown={handleMouseDown}
         >
@@ -143,36 +156,21 @@ export default function TerminalView({ session }) {
             {/* Context Menu */}
             {menu && (
                 <div
+                    className="context-menu glass-panel"
                     style={{
-                        position: "fixed",
                         top: menu.y,
                         left: menu.x,
-                        background: "#111",
-                        border: "1px solid #333",
-                        borderRadius: 6,
-                        padding: 6,
-                        zIndex: 9999,
-                        minWidth: 120,
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
                 >
-                    <div style={item} onClick={handleCopy}>
-                        📋 Copy
+                    <div className="menu-item" onClick={handleCopy}>
+                        <FiCopy size={14} /> Copy
                     </div>
-                    <div style={item} onClick={handlePaste}>
-                        📥 Paste
+                    <div className="menu-item" onClick={handlePaste}>
+                        <FiClipboard size={14} /> Paste
                     </div>
                 </div>
             )}
         </div>
     );
 }
-
-const item = {
-    padding: "6px 10px",
-    cursor: "pointer",
-    fontSize: 13,
-    borderRadius: 4,
-    color: "#fff",
-};
