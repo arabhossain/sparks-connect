@@ -97,61 +97,61 @@ export default function App() {
     useEffect(() => {
         if (!sessions.length || !hosts.length) return;
 
-        sessions.forEach(async (s) => {
-            try {
-                setSessions(prev =>
-                    prev.map(sess =>
-                        sess.id === s.id
-                            ? { ...sess, reconnecting: true }
-                            : sess
-                    )
-                );
+        const reconnect = async () => {
+            for (const s of sessions) {
+                try {
+                    setSessions(prev =>
+                        prev.map(sess =>
+                            sess.id === s.id
+                                ? { ...sess, reconnecting: true }
+                                : sess
+                        )
+                    );
 
-                const host = s.host;
+                    const host = s.host;
 
-                let jumpHost = null;
+                    await invoke("ssh_connect", {
+                        sessionId: s.id, // ✅ FIXED
 
-                if (host.jumpHostId) {
-                    const jh = hosts.find(h => h.id === host.jumpHostId);
-                    if (jh) {
-                        jumpHost = {
-                            host: jh.host,
-                            user: jh.user,
-                            password: jh.password || null,
-                            private_key: jh.sshKey || null,
-                            passphrase: jh.passphrase || null
-                        };
-                    }
+                        host: host.host,
+                        user: host.user,
+                        password: host.password || null,
+                        privateKey: host.sshKey || null,
+                        passphrase: host.passphrase || null,
+
+                        jumpHost: buildJumpHost(host),
+
+                        options: {
+                            strictHostChecking: false,
+                            useKnownHosts: false,
+                            allowRsa: true,
+                            useAgent: host.authType === "agent"
+                        }
+                    });
+
+                    setSessions(prev =>
+                        prev.map(sess =>
+                            sess.id === s.id
+                                ? { ...sess, connected: true, reconnecting: false }
+                                : sess
+                        )
+                    );
+
+                } catch (err) {
+                    console.error("Reconnect error:", err);
+
+                    setSessions(prev =>
+                        prev.map(sess =>
+                            sess.id === s.id
+                                ? { ...sess, connected: false, reconnecting: false }
+                                : sess
+                        )
+                    );
                 }
-
-                await invoke("ssh_connect", {
-                    sessionId: s.id,
-                    host: host.host,
-                    user: host.user,
-                    password: host.password || null,
-                    privateKey: host.sshKey || null,
-                    passphrase: host.passphrase || null,
-                    jumpHost
-                });
-
-                setSessions(prev =>
-                    prev.map(sess =>
-                        sess.id === s.id
-                            ? { ...sess, connected: true, reconnecting: false }
-                            : sess
-                    )
-                );
-
-            } catch {
-                setSessions(prev =>
-                    prev.map(sess =>
-                        sess.id === s.id
-                            ? { ...sess, connected: false, reconnecting: false }
-                            : sess
-                    )
-                );
             }
-        });
+        };
+
+        reconnect();
     }, [hosts]);
 
     const handleAuth = async () => {
@@ -275,7 +275,19 @@ export default function App() {
                 password: host.password || null,
                 privateKey: host.sshKey || null,
                 passphrase: host.passphrase || null,
-                jumpHost: buildJumpHost(host)
+
+                jumpHost: buildJumpHost(host),
+
+                options: {
+                    strictHostChecking: false,
+                    useKnownHosts: false,
+                    allowRsa: true,
+                    useAgent: host.authType === "agent",
+
+                    identityFile: host.identityFile,
+                    identitiesOnly: host.identitiesOnly,
+                    proxyCommand: host.proxyCommand
+                }
             });
 
             notify.dismiss(loadingToast);
@@ -342,7 +354,6 @@ export default function App() {
 
                 if (exists) continue;
 
-                // ✅ save to DB
                 await fetch(`${API}/hosts`, {
                     method: "POST",
                     headers: {
@@ -351,9 +362,22 @@ export default function App() {
                     },
                     body: JSON.stringify({
                         name: h.host,
-                        host,
-                        user,
-                        sshKey: null,
+
+                        host: host,
+                        port: h.port || 22,
+                        user: user,
+
+                        authType: h.identity_file ? "sshKey" : "agent",
+
+                        sshKey: null, // optional: load file later if needed
+                        passphrase: null,
+                        useAgent: !h.identity_file,
+
+                        identityFile: h.identity_file || null,
+                        identitiesOnly: h.identities_only || false,
+                        proxyCommand: h.proxy_command || null,
+
+                        proxyJump: h.proxy_jump || null,
                     }),
                 });
 
@@ -363,7 +387,6 @@ export default function App() {
             notify.dismiss(loading);
             notify.success(`Imported ${added} hosts`);
 
-            // refresh from DB
             fetchHosts();
 
         } catch (err) {

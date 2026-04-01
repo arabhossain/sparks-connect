@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import "../styles/modal.css";
 
 export default function HostModal({ host, hosts = [], onClose, onSave }) {
@@ -8,22 +8,26 @@ export default function HostModal({ host, hosts = [], onClose, onSave }) {
         host: "",
         port: 22,
         user: "",
+
         authType: "password",
 
         password: "",
         sshKey: "",
+        identityFile: "",
         passphrase: "",
 
         useAgent: false,
+        identitiesOnly: false,
 
-        jumpHostId: "", // ✅ only reference existing host
+        jumpHostId: "",
+        proxyCommand: ""
     });
 
     useEffect(() => {
         if (host) {
             setForm(prev => ({
                 ...prev,
-                ...host,
+                ...host
             }));
         }
     }, [host]);
@@ -32,49 +36,51 @@ export default function HostModal({ host, hosts = [], onClose, onSave }) {
         setForm(prev => ({ ...prev, [key]: value }));
     };
 
+    const toggleKeyMode = () => {
+        update("sshKey", "");
+        update("identityFile", "");
+    };
+
     return (
         <div className="modal-overlay">
             <motion.div
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
                 className="modal-content glass-panel fade-in"
             >
                 <h2>{host ? "Edit Server Connection" : "Add New Server"}</h2>
 
+                {/* ================= BASIC ================= */}
                 <div className="form-group">
-                    <label>Connection Name</label>
+                    <label>Name</label>
                     <input
-                        placeholder="e.g. Production Web"
                         value={form.name}
                         onChange={e => update("name", e.target.value)}
                     />
                 </div>
 
-                <div style={{ display: "flex", gap: "10px" }}>
+                <div style={{ display: "flex", gap: 10 }}>
                     <div className="form-group" style={{ flex: 3 }}>
-                        <label>Hostname / IP</label>
+                        <label>Host</label>
                         <input
-                            placeholder="e.g. 192.168.1.1"
                             value={form.host}
                             onChange={e => update("host", e.target.value)}
                         />
                     </div>
+
                     <div className="form-group" style={{ flex: 1 }}>
                         <label>Port</label>
                         <input
                             type="number"
-                            placeholder="22"
                             value={form.port}
-                            onChange={e => update("port", e.target.value)}
+                            onChange={e => update("port", Number(e.target.value))}
                         />
                     </div>
                 </div>
 
                 <div className="form-group">
-                    <label>Username</label>
+                    <label>User</label>
                     <input
-                        placeholder="root"
                         value={form.user}
                         onChange={e => update("user", e.target.value)}
                     />
@@ -84,84 +90,104 @@ export default function HostModal({ host, hosts = [], onClose, onSave }) {
                 <div className="auth-section">
                     <h4>Authentication</h4>
 
-                    <div className="form-group">
-                        <label>Auth Method</label>
-                        <select
-                            value={form.authType}
-                            onChange={e => update("authType", e.target.value)}
-                        >
-                            <option value="password">Password</option>
-                            <option value="sshKey">SSH Key</option>
-                            <option value="agent">SSH Agent</option>
-                        </select>
-                    </div>
+                    <select
+                        value={form.authType}
+                        onChange={e => update("authType", e.target.value)}
+                    >
+                        <option value="password">Password</option>
+                        <option value="sshKey">SSH Key</option>
+                        <option value="agent">SSH Agent</option>
+                    </select>
 
+                    {/* PASSWORD */}
                     {form.authType === "password" && (
-                        <div className="form-group">
-                            <label>Password</label>
-                            <input
-                                type="password"
-                                placeholder="••••••••"
-                                value={form.password}
-                                onChange={e => update("password", e.target.value)}
-                            />
-                        </div>
+                        <input
+                            type="password"
+                            placeholder="Password"
+                            value={form.password}
+                            onChange={e => update("password", e.target.value)}
+                        />
                     )}
 
+                    {/* SSH KEY */}
                     {form.authType === "sshKey" && (
                         <>
                             <div className="form-group">
-                                <label>Private Key Content</label>
+                                <label>Key Mode</label>
+                                <select
+                                    value={form.identityFile ? "file" : "inline"}
+                                    onChange={toggleKeyMode}
+                                >
+                                    <option value="inline">Paste Key</option>
+                                    <option value="file">Use File Path</option>
+                                </select>
+                            </div>
+
+                            {!form.identityFile && (
                                 <textarea
-                                    style={{ height: "100px" }}
-                                    placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                                    placeholder="Paste private key..."
                                     value={form.sshKey}
                                     onChange={e => update("sshKey", e.target.value)}
                                 />
-                            </div>
+                            )}
 
-                            <div className="form-group">
-                                <label>Passphrase (Optional)</label>
+                            {form.identityFile !== "" && (
                                 <input
-                                    type="password"
-                                    placeholder="Optional"
-                                    value={form.passphrase}
-                                    onChange={e => update("passphrase", e.target.value)}
+                                    placeholder="~/.ssh/id_rsa"
+                                    value={form.identityFile}
+                                    onChange={e => update("identityFile", e.target.value)}
                                 />
-                            </div>
+                            )}
+
+                            <input
+                                type="password"
+                                placeholder="Passphrase (optional)"
+                                value={form.passphrase}
+                                onChange={e => update("passphrase", e.target.value)}
+                            />
+
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    checked={form.identitiesOnly}
+                                    onChange={e => update("identitiesOnly", e.target.checked)}
+                                />
+                                IdentitiesOnly
+                            </label>
                         </>
                     )}
 
+                    {/* AGENT */}
                     {form.authType === "agent" && (
-                        <label style={{ display: "flex", gap: "12px", alignItems: "center", cursor: "pointer", fontSize: "14px" }}>
-                            <input
-                                type="checkbox"
-                                style={{ width: "18px", height: "18px" }}
-                                checked={form.useAgent}
-                                onChange={e => update("useAgent", e.target.checked)}
-                            />
-                            Use SSH Agent From System
-                        </label>
+                        <p style={{ fontSize: 13, opacity: 0.7 }}>
+                            Will use system SSH agent (~/.ssh + ssh-agent)
+                        </p>
                     )}
                 </div>
 
-                {/* ================= JUMP HOST ================= */}
+                {/* ================= PROXY ================= */}
                 <div className="jump-section">
-                    <h4>Jump Host / Proxy</h4>
+                    <h4>Proxy / Jump Host</h4>
+
+                    <select
+                        value={form.jumpHostId || ""}
+                        onChange={e => update("jumpHostId", e.target.value)}
+                    >
+                        <option value="">Direct</option>
+                        {hosts.map(h => (
+                            <option key={h.id} value={h.id}>
+                                {h.name} ({h.host})
+                            </option>
+                        ))}
+                    </select>
 
                     <div className="form-group">
-                        <label>Jump Host Selection</label>
-                        <select
-                            value={form.jumpHostId || ""}
-                            onChange={e => update("jumpHostId", e.target.value)}
-                        >
-                            <option value="">No Proxy (Direct)</option>
-                            {hosts.map(h => (
-                                <option key={h.id} value={h.id}>
-                                    {h.name} ({h.host})
-                                </option>
-                            ))}
-                        </select>
+                        <label>Or Custom ProxyCommand</label>
+                        <input
+                            placeholder="ssh -W %h:%p jump-host"
+                            value={form.proxyCommand}
+                            onChange={e => update("proxyCommand", e.target.value)}
+                        />
                     </div>
                 </div>
 
@@ -170,8 +196,12 @@ export default function HostModal({ host, hosts = [], onClose, onSave }) {
                     <button onClick={onClose} className="btn btn-cancel">
                         Cancel
                     </button>
-                    <button onClick={() => onSave(form)} className="btn btn-save">
-                        {host ? "Save Changes" : "Create Host"}
+
+                    <button
+                        onClick={() => onSave(form)}
+                        className="btn btn-save"
+                    >
+                        {host ? "Save Changes" : "Create"}
                     </button>
                 </div>
             </motion.div>
