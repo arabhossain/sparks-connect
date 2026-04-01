@@ -6,6 +6,11 @@ const { encrypt, decrypt } = require("../utils/crypto");
 
 const router = express.Router();
 
+/**
+ * =========================
+ * GET HOSTS
+ * =========================
+ */
 router.get("/", auth, async (req, res) => {
     try {
         const userId = req.user.id;
@@ -36,20 +41,36 @@ router.get("/", auth, async (req, res) => {
 
             result.push({
                 ...host,
+
+                // 🔐 decrypt sensitive
                 password: host.passwordEnc ? decrypt(host.passwordEnc) : null,
                 sshKey: host.sshKeyEnc ? decrypt(host.sshKeyEnc) : null,
                 passphrase: host.passphraseEnc ? decrypt(host.passphraseEnc) : null,
+
+                // 🏷 tags
                 tags: tags.map(t => t.name),
-                jumpHost
+
+                // 🔗 jump host object
+                jumpHost,
+
+                // ✅ normalize booleans
+                identitiesOnly: !!host.identitiesOnly,
+                isShared: !!host.isShared,
             });
         }
 
         res.json(result);
     } catch (err) {
+        console.error(err);
         res.status(500).json(err);
     }
 });
 
+/**
+ * =========================
+ * CREATE HOST
+ * =========================
+ */
 router.post("/", auth, async (req, res) => {
     try {
         const userId = req.user.id;
@@ -57,11 +78,20 @@ router.post("/", auth, async (req, res) => {
         const {
             name,
             host,
+            port = 22,
             user,
+
             authType,
             password,
             sshKey,
             passphrase,
+
+            // 🔥 NEW FIELDS
+            identityFile,
+            identitiesOnly = false,
+            proxyCommand,
+            proxyJump,
+
             description,
             tags = [],
             isShared = false,
@@ -72,17 +102,29 @@ router.post("/", auth, async (req, res) => {
 
         await db.query(
             `INSERT INTO hosts
-             (id, name, host, user, authType, passwordEnc, sshKeyEnc, passphraseEnc, description, ownerId, isShared, jumpHostId)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             (id, name, host, port, user, authType,
+              passwordEnc, sshKeyEnc, passphraseEnc,
+              identityFile, identitiesOnly, proxyCommand, proxyJump,
+              description, ownerId, isShared, jumpHostId)
+
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 id,
                 name,
                 host,
+                port,
                 user,
                 authType,
+
                 password ? encrypt(password) : null,
                 sshKey ? encrypt(sshKey) : null,
                 passphrase ? encrypt(passphrase) : null,
+
+                identityFile || null,
+                identitiesOnly ? 1 : 0,
+                proxyCommand || null,
+                proxyJump || null,
+
                 description,
                 userId,
                 isShared ? 1 : 0,
@@ -90,6 +132,7 @@ router.post("/", auth, async (req, res) => {
             ]
         );
 
+        // 🏷 TAGS
         for (const tag of tags) {
             const tagId = crypto.randomUUID();
 
@@ -112,11 +155,18 @@ router.post("/", auth, async (req, res) => {
         }
 
         res.json({ id });
+
     } catch (err) {
+        console.error(err);
         res.status(500).json(err);
     }
 });
 
+/**
+ * =========================
+ * UPDATE HOST
+ * =========================
+ */
 router.put("/:id", auth, async (req, res) => {
     try {
         const { id } = req.params;
@@ -124,11 +174,20 @@ router.put("/:id", auth, async (req, res) => {
         const {
             name,
             host,
+            port = 22,
             user,
+
             authType,
             password,
             sshKey,
             passphrase,
+
+            // 🔥 NEW FIELDS
+            identityFile,
+            identitiesOnly,
+            proxyCommand,
+            proxyJump,
+
             description,
             isShared,
             jumpHostId = null
@@ -138,11 +197,16 @@ router.put("/:id", auth, async (req, res) => {
             `UPDATE hosts SET
                               name=?,
                               host=?,
+                              port=?,
                               user=?,
                               authType=?,
                               passwordEnc=?,
                               sshKeyEnc=?,
                               passphraseEnc=?,
+                              identityFile=?,
+                              identitiesOnly=?,
+                              proxyCommand=?,
+                              proxyJump=?,
                               description=?,
                               isShared=?,
                               jumpHostId=?
@@ -150,24 +214,40 @@ router.put("/:id", auth, async (req, res) => {
             [
                 name,
                 host,
+                port,
                 user,
                 authType,
+
                 password ? encrypt(password) : null,
                 sshKey ? encrypt(sshKey) : null,
                 passphrase ? encrypt(passphrase) : null,
+
+                identityFile || null,
+                identitiesOnly ? 1 : 0,
+                proxyCommand || null,
+                proxyJump || null,
+
                 description,
                 isShared ? 1 : 0,
                 jumpHostId || null,
+
                 id
             ]
         );
 
         res.json({ success: true });
+
     } catch (err) {
+        console.error(err);
         res.status(500).json(err);
     }
 });
 
+/**
+ * =========================
+ * DELETE HOST
+ * =========================
+ */
 router.delete("/:id", auth, async (req, res) => {
     try {
         const { id } = req.params;
@@ -177,7 +257,6 @@ router.delete("/:id", auth, async (req, res) => {
             [id]
         );
 
-        // 🔍 Check if anything was deleted
         if (result.affectedRows === 0) {
             return res.status(404).json({
                 success: false,
