@@ -1,10 +1,32 @@
 .terminal-container {
+    flex: 1;
     width: 100%;
     height: 100%;
     position: relative;
     background: var(--bg-primary);
-    padding: 10px;
-    /* Slight padding for the workstation feel */
+    overflow: hidden;
+}
+
+.terminal-actions {
+    display: flex;
+    gap: 12px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid var(--border-subtle);
+    align-items: center;
+}
+
+.terminal-pane {
+    position: relative;
+    border: 2px solid transparent;
+    transition: var(--transition-fast);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.terminal-pane.active {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);
 }
 
 .context-menu {

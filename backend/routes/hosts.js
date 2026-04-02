@@ -92,6 +92,7 @@ router.post("/", auth, async (req, res) => {
             proxyCommand,
             proxyJump,
 
+            group,
             description,
             tags = [],
             isShared = false,
@@ -104,10 +105,10 @@ router.post("/", auth, async (req, res) => {
             `INSERT INTO hosts
              (id, name, host, port, user, authType,
               passwordEnc, sshKeyEnc, passphraseEnc,
-              identityFile, identitiesOnly, proxyCommand, proxyJump,
+              identityFile, identitiesOnly, proxyCommand, proxyJump, "group",
               description, ownerId, isShared, jumpHostId)
 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 id,
                 name,
@@ -124,7 +125,7 @@ router.post("/", auth, async (req, res) => {
                 identitiesOnly ? 1 : 0,
                 proxyCommand || null,
                 proxyJump || null,
-
+                group || null,
                 description,
                 userId,
                 isShared ? 1 : 0,
@@ -188,6 +189,7 @@ router.put("/:id", auth, async (req, res) => {
             proxyCommand,
             proxyJump,
 
+            group,
             description,
             isShared,
             jumpHostId = null
@@ -207,6 +209,7 @@ router.put("/:id", auth, async (req, res) => {
                               identitiesOnly=?,
                               proxyCommand=?,
                               proxyJump=?,
+                              "group"=?,
                               description=?,
                               isShared=?,
                               jumpHostId=?
@@ -226,7 +229,7 @@ router.put("/:id", auth, async (req, res) => {
                 identitiesOnly ? 1 : 0,
                 proxyCommand || null,
                 proxyJump || null,
-
+                group || null,
                 description,
                 isShared ? 1 : 0,
                 jumpHostId || null,

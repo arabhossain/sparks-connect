@@ -4,8 +4,13 @@ import Sidebar from "./components/Sidebar";
 import HostModal from "./components/HostModal";
 import ImportModal from "./components/ImportModal";
 import DeleteModal from "./components/DeleteModal";
+import Dashboard from "./components/Dashboard";
+import CommandPalette from "./components/CommandPalette";
 import TerminalView from "./components/TerminalView";
+import TerminalGrid from "./components/TerminalGrid";
 import Tabs from "./components/Tabs";
+import { FiTrash2, FiPlus, FiTerminal, FiEdit2, FiSearch, FiLogOut, FiSlash } from "react-icons/fi";
+import { VscSplitHorizontal, VscSplitVertical, VscLayoutCentered } from "react-icons/vsc";
 import { invoke } from "@tauri-apps/api/core";
 import { Toaster, toast } from "react-hot-toast";
 
@@ -23,12 +28,27 @@ export default function App() {
     const [sidebarWidth, setSidebarWidth] = useState(300);
     const [isResizing, setIsResizing] = useState(false);
     const [hosts, setHosts] = useState([]);
+    const [groups, setGroups] = useState([]);
     const [modalOpen, setModalOpen] = useState(false);
     const [importOpen, setImportOpen] = useState(false);
     const [editingHost, setEditingHost] = useState(null);
     const [sessions, setSessions] = useState([]);
     const [activeSession, setActiveSession] = useState(null);
+    const [visibleSessions, setVisibleSessions] = useState([]); // List of IDs in the current split view
+    const [layout, setLayout] = useState("single"); // single, split-v, split-h
     const [confirmDelete, setConfirmDelete] = useState(null);
+    const [paletteOpen, setPaletteOpen] = useState(false);
+
+    useEffect(() => {
+        const handleKeys = (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+                e.preventDefault();
+                setPaletteOpen(prev => !prev);
+            }
+        };
+        window.addEventListener("keydown", handleKeys);
+        return () => window.removeEventListener("keydown", handleKeys);
+    }, []);
 
     const notify = {
         success: (msg) => toast.success(msg),
@@ -72,7 +92,10 @@ export default function App() {
         if (saved) {
             const parsed = JSON.parse(saved);
             setSessions(parsed);
-            if (parsed.length > 0) setActiveSession(parsed[0].id);
+            if (parsed.length > 0) {
+                setActiveSession(parsed[0].id);
+                setVisibleSessions([parsed[0].id]);
+            }
         }
     }, []);
 
@@ -99,6 +122,11 @@ export default function App() {
         const newSession = { id, host, connected: false, reconnecting: true };
         setSessions(prev => [...prev, newSession]);
         setActiveSession(id);
+        setVisibleSessions(prev => {
+            if (layout === "single") return [id];
+            if (prev.length >= 2) return [prev[1], id]; // Slide window for split view
+            return [...prev, id];
+        });
         try {
             await invoke("ssh_connect", {
                 sessionId: id,
@@ -137,6 +165,31 @@ export default function App() {
             if (activeSession === sessionId) setActiveSession(updated[0]?.id || null);
             return updated;
         });
+    };
+
+    const selectSession = (id) => {
+        setActiveSession(id);
+        if (layout === "single") {
+            setVisibleSessions([id]);
+        }
+    };
+
+    const toggleSplit = (type) => {
+        if (layout === type) {
+            setLayout("single");
+            setVisibleSessions([activeSession]);
+        } else {
+            setLayout(type);
+            // If we only have one session, duplicate it for the split view or pick another one
+            if (visibleSessions.length < 2) {
+                const other = sessions.find(s => s.id !== activeSession);
+                if (other) {
+                    setVisibleSessions([activeSession, other.id]);
+                } else {
+                    setVisibleSessions([activeSession]); // Just one if no others
+                }
+            }
+        }
     };
 
     const closeHostSessions = (hostId) => {
@@ -225,7 +278,18 @@ export default function App() {
         setHosts(data);
     };
 
-    useEffect(() => { if (token) fetchHosts(); }, [token]);
+    const fetchGroups = async () => {
+        const res = await fetch(API + "/groups", { headers: { Authorization: "Bearer " + token } });
+        const data = await res.json();
+        setGroups(data);
+    };
+
+    useEffect(() => {
+        if (token) {
+            fetchHosts();
+            fetchGroups();
+        }
+    }, [token]);
 
     const saveHost = async (host) => {
         const loadingToast = notify.loading("Saving host...");
@@ -244,6 +308,61 @@ export default function App() {
         } catch {
             notify.dismiss(loadingToast);
             notify.error("Failed to save host");
+        }
+    };
+
+    const moveHostToGroup = async (hostId, newGroup) => {
+        const host = hosts.find(h => h.id === hostId);
+        if (!host) return;
+
+        const loadingToast = notify.loading(`Moving ${host.name} to ${newGroup || 'Ungrouped'}...`);
+        try {
+            const url = `${API}/hosts/${hostId}`;
+            await fetch(url, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                body: JSON.stringify({ ...host, group: newGroup })
+            });
+            notify.dismiss(loadingToast);
+            notify.success(`Moved to ${newGroup || 'Ungrouped'}`);
+            fetchHosts();
+        } catch {
+            notify.dismiss(loadingToast);
+            notify.error("Failed to move host");
+        }
+    };
+
+    const createGroup = async (name) => {
+        const loading = notify.loading(`Creating group ${name}...`);
+        try {
+            const res = await fetch(API + "/groups", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                body: JSON.stringify({ name })
+            });
+            const newGroup = await res.json();
+            setGroups(prev => [...prev, newGroup]);
+            notify.dismiss(loading);
+            notify.success("Group created");
+        } catch {
+            notify.dismiss(loading);
+            notify.error("Failed to create group");
+        }
+    };
+
+    const deleteGroup = async (groupId) => {
+        const loading = notify.loading("Deleting group...");
+        try {
+            await fetch(`${API}/groups/${groupId}`, {
+                method: "DELETE",
+                headers: { Authorization: "Bearer " + token }
+            });
+            setGroups(prev => prev.filter(g => g.id !== groupId));
+            notify.dismiss(loading);
+            notify.success("Group deleted");
+        } catch {
+            notify.dismiss(loading);
+            notify.error("Failed to delete group");
         }
     };
 
@@ -316,23 +435,59 @@ export default function App() {
                 onEdit={(h) => { setEditingHost(h); setModalOpen(true); }}
                 onLogout={logout} importSSH={() => setImportOpen(true)} onDelete={deleteHost}
                 onStopHostSessions={closeHostSessions}
+                onMoveHost={moveHostToGroup}
+                groups={groups}
+                onCreateGroup={createGroup}
+                onDeleteGroup={deleteGroup}
             />
             <div className="resize-handle" onMouseDown={startResizing} />
             <main className="main-content">
-                <Tabs sessions={sessions} setSessions={setSessions} activeSession={activeSession} onSelect={setActiveSession} onClose={closeSession} actions={tabActions} />
+                <Tabs sessions={sessions} setSessions={setSessions} activeSession={activeSession} onSelect={selectSession} onClose={closeSession} actions={tabActions} />
+                {sessions.length > 0 && (
+                    <div className="terminal-actions">
+                        <button className={`icon-btn ${layout === "split-v" ? "active" : ""}`} title="Split Vertical" onClick={() => toggleSplit("split-v")}>
+                            <VscSplitVertical size={16} />
+                        </button>
+                        <button className={`icon-btn ${layout === "split-h" ? "active" : ""}`} title="Split Horizontal" onClick={() => toggleSplit("split-h")}>
+                            <VscSplitHorizontal size={16} />
+                        </button>
+                        <button className={`icon-btn ${layout === "single" ? "active" : ""}`} title="Single View" onClick={() => setLayout("single")}>
+                            <VscLayoutCentered size={16} />
+                        </button>
+                        {layout !== "single" && (
+                            <button className="icon-btn danger" title="Clear Split" onClick={() => { setLayout("single"); setVisibleSessions([activeSession]); }}>
+                                <FiSlash size={16} />
+                            </button>
+                        )}
+                    </div>
+                )}
                 <div className="terminal-container">
-                    {sessions.map(s => (
-                        <div key={s.id} style={{ display: s.id === activeSession ? "block" : "none", height: "100%" }}>
-                            <TerminalView session={s} />
-                        </div>
-                    ))}
+                    {sessions.length === 0 ? (
+                        <Dashboard hosts={hosts} onAdd={() => setModalOpen(true)} onConnect={openSession} />
+                    ) : (
+                        <TerminalGrid
+                            sessions={sessions}
+                            visibleIds={visibleSessions}
+                            activeId={activeSession}
+                            layout={layout}
+                            onSelect={setActiveSession}
+                        />
+                    )}
                 </div>
             </main>
-            {modalOpen && <HostModal host={editingHost} hosts={hosts} onClose={() => setModalOpen(false)} onSave={saveHost} />}
+            {modalOpen && <HostModal host={editingHost} hosts={hosts} groups={groups} onClose={() => setModalOpen(false)} onSave={saveHost} />}
             {importOpen && <ImportModal existingHosts={hosts} onClose={() => setImportOpen(false)} onImport={handleImportHosts} />}
             <AnimatePresence>
                 {confirmDelete && <DeleteModal host={confirmDelete} onClose={() => setConfirmDelete(null)} onConfirm={confirmDeleteAction} />}
             </AnimatePresence>
+            <CommandPalette
+                isOpen={paletteOpen}
+                onClose={() => setPaletteOpen(false)}
+                hosts={hosts}
+                onConnect={openSession}
+                onAdd={() => setModalOpen(true)}
+                onLogout={logout}
+            />
         </div>
     );
 }

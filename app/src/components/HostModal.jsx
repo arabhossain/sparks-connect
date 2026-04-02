@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { FiServer, FiX } from "react-icons/fi";
 import "../styles/modal.css";
 
-export default function HostModal({ host, hosts = [], onClose, onSave }) {
+export default function HostModal({ host, hosts = [], groups = [], onClose, onSave }) {
     const [form, setForm] = useState({
         name: "",
         host: "",
@@ -17,7 +17,8 @@ export default function HostModal({ host, hosts = [], onClose, onSave }) {
         useAgent: false,
         identitiesOnly: false,
         jumpHostId: "",
-        proxyCommand: ""
+        proxyCommand: "",
+        group: ""
     });
 
     const [searchTerm, setSearchTerm] = useState("");
@@ -122,6 +123,22 @@ export default function HostModal({ host, hosts = [], onClose, onSave }) {
                             onChange={e => update("user", e.target.value)}
                             placeholder="root"
                         />
+                    </div>
+
+                    <div className="form-group">
+                        <label>Group (Folder)</label>
+                        <input
+                            value={form.group}
+                            onChange={e => update("group", e.target.value)}
+                            placeholder="e.g. Production, Staging"
+                            list="group-suggestions"
+                        />
+                        <datalist id="group-suggestions">
+                            {groups.map(g => (
+                                <option key={g.id} value={g.name} />
+                            ))}
+                            <option value="Ungrouped" />
+                        </datalist>
                     </div>
 
                     {/* ================= AUTH ================= */}
