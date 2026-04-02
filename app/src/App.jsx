@@ -12,6 +12,7 @@ import Tabs from "./components/Tabs";
 import { FiTrash2, FiPlus, FiTerminal, FiEdit2, FiSearch, FiLogOut, FiSlash } from "react-icons/fi";
 import { VscSplitHorizontal, VscSplitVertical, VscLayoutCentered } from "react-icons/vsc";
 import { invoke } from "@tauri-apps/api/core";
+import logoImg from "./assets/logo.png";
 import { Toaster, toast } from "react-hot-toast";
 
 import "./styles/global.css";
@@ -435,7 +436,7 @@ export default function App() {
                 <div className="background-blur blur-2"></div>
                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="login-card glass-panel">
                     <div className="login-header" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem'}}>
-                        <img src="/src/assets/logo.png" alt="Sparks Connect Logo" style={{width: '64px', height: '64px', borderRadius: '12px'}} />
+                        <img src={logoImg} alt="Sparks Connect Logo" style={{width: '64px', height: '64px', borderRadius: '12px'}} />
                         <div className="login-logo">Sparks Connect</div>
                     </div>
                     <div className="login-form">

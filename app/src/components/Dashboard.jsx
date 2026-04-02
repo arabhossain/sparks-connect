@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { FiPlus, FiTerminal, FiZap, FiShield, FiCpu } from "react-icons/fi";
+import logoImg from "../assets/logo.png";
 import "../styles/dashboard.css";
 
 export default function Dashboard({ onAdd, onConnect, hosts }) {
@@ -15,7 +16,7 @@ export default function Dashboard({ onAdd, onConnect, hosts }) {
             >
                 <div className="dashboard-header-container" style={{marginBottom: '48px', display: 'flex', flexDirection: 'column', gap: '16px'}}>
                     <div className="dashboard-header" style={{display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'center', marginBottom: '0'}}>
-                        <img src="/src/assets/logo.png" alt="Sparks Connect Logo" style={{width: '64px', height: '64px', borderRadius: '12px'}} />
+                        <img src={logoImg} alt="Sparks Connect Logo" style={{width: '64px', height: '64px', borderRadius: '12px'}} />
                         <div style={{textAlign: 'left'}}>
                             <h1 style={{margin: '0', marginBottom: '4px'}}>Welcome to <span className="text-gradient">Sparks Connect</span></h1>
                             <p style={{margin: '0'}}>Your unified cloud management workstation. Connect to a server to get started.</p>
