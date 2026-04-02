@@ -14,7 +14,9 @@ import { VscSplitHorizontal, VscSplitVertical, VscLayoutCentered } from "react-i
 import { invoke } from "@tauri-apps/api/core";
 import { Toaster, toast } from "react-hot-toast";
 
+
 import "./styles/global.css";
+import "./styles/tabs.css";
 import "./styles/tabs.css";
 import "./styles/login.css";
 
@@ -71,6 +73,7 @@ export default function App() {
             setSidebarWidth(newWidth);
         };
         const stopResizing = () => setIsResizing(false);
+        const stopResizing = () => setIsResizing(false);
         if (isResizing) {
             window.addEventListener("mousemove", handleMouseMove);
             window.addEventListener("mouseup", stopResizing);
@@ -84,6 +87,7 @@ export default function App() {
     useEffect(() => {
         const disableRightClick = (e) => e.preventDefault();
         document.addEventListener("contextmenu", disableRightClick);
+        return () => document.removeEventListener("contextmenu", disableRightClick);
         return () => document.removeEventListener("contextmenu", disableRightClick);
     }, []);
 
@@ -241,6 +245,7 @@ export default function App() {
 
     const handleAuth = async () => {
         const loadingToast = notify.loading(mode === "login" ? "Logging in..." : "Registering...");
+        const loadingToast = notify.loading(mode === "login" ? "Logging in..." : "Registering...");
         try {
             const endpoint = mode === "login" ? "/auth/login" : "/auth/register";
             const res = await fetch(API + endpoint, {
@@ -260,6 +265,7 @@ export default function App() {
                 setMode("login");
             }
         } catch {
+        } catch {
             notify.dismiss(loadingToast);
             notify.error("Authentication failed");
         }
@@ -273,6 +279,7 @@ export default function App() {
     };
 
     const fetchHosts = async () => {
+        const res = await fetch(API + "/hosts", { headers: { Authorization: "Bearer " + token } });
         const res = await fetch(API + "/hosts", { headers: { Authorization: "Bearer " + token } });
         const data = await res.json();
         setHosts(data);
@@ -295,8 +302,10 @@ export default function App() {
         const loadingToast = notify.loading("Saving host...");
         try {
             const url = editingHost ? `${API}/hosts/${editingHost.id}` : `${API}/hosts`;
+            const url = editingHost ? `${API}/hosts/${editingHost.id}` : `${API}/hosts`;
             await fetch(url, {
                 method: editingHost ? "PUT" : "POST",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
                 headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
                 body: JSON.stringify(host),
             });
@@ -387,31 +396,41 @@ export default function App() {
             }
             notify.dismiss(loading);
             notify.success("Import complete");
+            notify.success("Import complete");
             fetchHosts();
         } catch {
+        } catch {
             notify.dismiss(loading);
+            notify.error("Import failed");
             notify.error("Import failed");
         }
     };
 
+    const deleteHost = (host) => setConfirmDelete(host);
     const deleteHost = (host) => setConfirmDelete(host);
     const confirmDeleteAction = async () => {
         const host = confirmDelete;
         if (!host) return;
         setConfirmDelete(null);
         notify.loading(`Deleting ${host.name}...`);
+        notify.loading(`Deleting ${host.name}...`);
         try {
+            await fetch(`${API}/hosts/${host.id}`, { method: "DELETE", headers: { Authorization: "Bearer " + token } });
+            notify.success("Host deleted");
             await fetch(`${API}/hosts/${host.id}`, { method: "DELETE", headers: { Authorization: "Bearer " + token } });
             notify.success("Host deleted");
             fetchHosts();
         } catch { notify.error("Delete failed"); }
-    };
+    } catch { notify.error("Delete failed"); }
+};
 
-    if (!token) {
-        return (
-            <div className="login-container">
-                <div className="background-blur blur-1"></div>
-                <div className="background-blur blur-2"></div>
+if (!token) {
+    return (
+        <div className="login-container">
+            <div className="background-blur blur-1"></div>
+            <div className="background-blur blur-2"></div>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="login-card glass-panel">
+                <div className="login-header"><div className="login-logo">SparkConnect</div></div>
                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="login-card glass-panel">
                     <div className="login-header"><div className="login-logo">SparkConnect</div></div>
                     <div className="login-form">
@@ -419,75 +438,80 @@ export default function App() {
                         <div className="form-group"><label>Password</label><input type="password" value={password} onChange={e => setPassword(e.target.value)} /></div>
                         <button className="btn auth-btn" onClick={handleAuth}>{mode === "login" ? "Sign In" : "Register"}</button>
                         <button className="btn switch-btn" onClick={() => setMode(mode === "login" ? "register" : "login")}>{mode === "login" ? "New? Register" : "Login"}</button>
+                        <div className="form-group"><label>Username</label><input value={username} onChange={e => setUsername(e.target.value)} /></div>
+                        <div className="form-group"><label>Password</label><input type="password" value={password} onChange={e => setPassword(e.target.value)} /></div>
+                        <button className="btn auth-btn" onClick={handleAuth}>{mode === "login" ? "Sign In" : "Register"}</button>
+                        <button className="btn switch-btn" onClick={() => setMode(mode === "login" ? "register" : "login")}>{mode === "login" ? "New? Register" : "Login"}</button>
                     </div>
                 </motion.div>
                 <Toaster position="bottom-center" />
-            </div>
-        );
-    }
-
-    return (
-        <div className="app-container">
-            <Toaster position="top-right" />
-            <Sidebar
-                width={sidebarWidth} hosts={hosts} sessions={sessions} onConnect={openSession}
-                onAdd={() => { setEditingHost(null); setModalOpen(true); }}
-                onEdit={(h) => { setEditingHost(h); setModalOpen(true); }}
-                onLogout={logout} importSSH={() => setImportOpen(true)} onDelete={deleteHost}
-                onStopHostSessions={closeHostSessions}
-                onMoveHost={moveHostToGroup}
-                groups={groups}
-                onCreateGroup={createGroup}
-                onDeleteGroup={deleteGroup}
-            />
-            <div className="resize-handle" onMouseDown={startResizing} />
-            <main className="main-content">
-                <Tabs sessions={sessions} setSessions={setSessions} activeSession={activeSession} onSelect={selectSession} onClose={closeSession} actions={tabActions} />
-                {sessions.length > 0 && (
-                    <div className="terminal-actions">
-                        <button className={`icon-btn ${layout === "split-v" ? "active" : ""}`} title="Split Vertical" onClick={() => toggleSplit("split-v")}>
-                            <VscSplitVertical size={16} />
-                        </button>
-                        <button className={`icon-btn ${layout === "split-h" ? "active" : ""}`} title="Split Horizontal" onClick={() => toggleSplit("split-h")}>
-                            <VscSplitHorizontal size={16} />
-                        </button>
-                        <button className={`icon-btn ${layout === "single" ? "active" : ""}`} title="Single View" onClick={() => setLayout("single")}>
-                            <VscLayoutCentered size={16} />
-                        </button>
-                        {layout !== "single" && (
-                            <button className="icon-btn danger" title="Clear Split" onClick={() => { setLayout("single"); setVisibleSessions([activeSession]); }}>
-                                <FiSlash size={16} />
-                            </button>
-                        )}
-                    </div>
-                )}
-                <div className="terminal-container">
-                    {sessions.length === 0 ? (
-                        <Dashboard hosts={hosts} onAdd={() => setModalOpen(true)} onConnect={openSession} />
-                    ) : (
-                        <TerminalGrid
-                            sessions={sessions}
-                            visibleIds={visibleSessions}
-                            activeId={activeSession}
-                            layout={layout}
-                            onSelect={setActiveSession}
-                        />
-                    )}
-                </div>
-            </main>
-            {modalOpen && <HostModal host={editingHost} hosts={hosts} groups={groups} onClose={() => setModalOpen(false)} onSave={saveHost} />}
-            {importOpen && <ImportModal existingHosts={hosts} onClose={() => setImportOpen(false)} onImport={handleImportHosts} />}
-            <AnimatePresence>
-                {confirmDelete && <DeleteModal host={confirmDelete} onClose={() => setConfirmDelete(null)} onConfirm={confirmDeleteAction} />}
-            </AnimatePresence>
-            <CommandPalette
-                isOpen={paletteOpen}
-                onClose={() => setPaletteOpen(false)}
-                hosts={hosts}
-                onConnect={openSession}
-                onAdd={() => setModalOpen(true)}
-                onLogout={logout}
-            />
+                <Toaster position="bottom-center" />
         </div>
     );
+}
+
+return (
+    <div className="app-container">
+        <Toaster position="top-right" />
+        <Sidebar
+            width={sidebarWidth} hosts={hosts} sessions={sessions} onConnect={openSession}
+            onAdd={() => { setEditingHost(null); setModalOpen(true); }}
+            onEdit={(h) => { setEditingHost(h); setModalOpen(true); }}
+            onLogout={logout} importSSH={() => setImportOpen(true)} onDelete={deleteHost}
+            onStopHostSessions={closeHostSessions}
+            onMoveHost={moveHostToGroup}
+            groups={groups}
+            onCreateGroup={createGroup}
+            onDeleteGroup={deleteGroup}
+        />
+        <div className="resize-handle" onMouseDown={startResizing} />
+        <main className="main-content">
+            <Tabs sessions={sessions} setSessions={setSessions} activeSession={activeSession} onSelect={selectSession} onClose={closeSession} actions={tabActions} />
+            {sessions.length > 0 && (
+                <div className="terminal-actions">
+                    <button className={`icon-btn ${layout === "split-v" ? "active" : ""}`} title="Split Vertical" onClick={() => toggleSplit("split-v")}>
+                        <VscSplitVertical size={16} />
+                    </button>
+                    <button className={`icon-btn ${layout === "split-h" ? "active" : ""}`} title="Split Horizontal" onClick={() => toggleSplit("split-h")}>
+                        <VscSplitHorizontal size={16} />
+                    </button>
+                    <button className={`icon-btn ${layout === "single" ? "active" : ""}`} title="Single View" onClick={() => setLayout("single")}>
+                        <VscLayoutCentered size={16} />
+                    </button>
+                    {layout !== "single" && (
+                        <button className="icon-btn danger" title="Clear Split" onClick={() => { setLayout("single"); setVisibleSessions([activeSession]); }}>
+                            <FiSlash size={16} />
+                        </button>
+                    )}
+                </div>
+            )}
+            <div className="terminal-container">
+                {sessions.length === 0 ? (
+                    <Dashboard hosts={hosts} onAdd={() => setModalOpen(true)} onConnect={openSession} />
+                ) : (
+                    <TerminalGrid
+                        sessions={sessions}
+                        visibleIds={visibleSessions}
+                        activeId={activeSession}
+                        layout={layout}
+                        onSelect={setActiveSession}
+                    />
+                )}
+            </div>
+        </main>
+        {modalOpen && <HostModal host={editingHost} hosts={hosts} groups={groups} onClose={() => setModalOpen(false)} onSave={saveHost} />}
+        {importOpen && <ImportModal existingHosts={hosts} onClose={() => setImportOpen(false)} onImport={handleImportHosts} />}
+        <AnimatePresence>
+            {confirmDelete && <DeleteModal host={confirmDelete} onClose={() => setConfirmDelete(null)} onConfirm={confirmDeleteAction} />}
+        </AnimatePresence>
+        <CommandPalette
+            isOpen={paletteOpen}
+            onClose={() => setPaletteOpen(false)}
+            hosts={hosts}
+            onConnect={openSession}
+            onAdd={() => setModalOpen(true)}
+            onLogout={logout}
+        />
+    </div>
+);
 }
