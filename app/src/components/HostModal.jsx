@@ -40,9 +40,16 @@ export default function HostModal({ host, hosts = [], groups = [], onClose, onSa
                 setIsJumpOpen(false);
             }
         };
+        const handleEsc = (e) => {
+            if (e.key === "Escape") onClose();
+        };
         document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+        document.addEventListener("keydown", handleEsc);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("keydown", handleEsc);
+        };
+    }, [onClose]);
 
     // Filter out the current host and search by name/ip
     const filteredHosts = hosts.filter(h => {

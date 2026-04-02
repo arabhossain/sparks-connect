@@ -12,6 +12,14 @@ export default function ImportModal({ onClose, onImport, existingHosts }) {
 
     const [loading, setLoading] = useState(false);
 
+    useEffect(() => {
+        const handleEsc = (e) => {
+            if (e.key === "Escape" && !loading) onClose();
+        };
+        document.addEventListener("keydown", handleEsc);
+        return () => document.removeEventListener("keydown", handleEsc);
+    }, [onClose, loading]);
+
     const selectSource = async (type) => {
         console.log("selectSource called with type:", type);
         setLoading(true);

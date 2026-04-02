@@ -1,8 +1,17 @@
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { FiTrash2, FiX, FiAlertTriangle } from "react-icons/fi";
 import "../styles/modal.css";
 
 export default function DeleteModal({ host, onClose, onConfirm }) {
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [onClose]);
+
     if (!host) return null;
 
     return (
