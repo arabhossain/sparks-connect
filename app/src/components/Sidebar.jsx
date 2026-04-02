@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { FiSearch, FiPlus, FiTrash2, FiEdit2, FiTerminal, FiKey, FiUser, FiX, FiFolderPlus, FiCheck } from "react-icons/fi";
+import { FiSearch, FiPlus, FiTrash2, FiEdit2, FiTerminal, FiKey, FiUser, FiX, FiFolderPlus, FiCheck, FiRefreshCw } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import { DndContext, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
@@ -69,7 +69,8 @@ export default function Sidebar({
     onMoveHost,
     groups = [],
     onCreateGroup,
-    onDeleteGroup
+    onDeleteGroup,
+    onRefresh
 }) {
     const [search, setSearch] = useState("");
     const [collapsedFolders, setCollapsedFolders] = useState({});
@@ -92,30 +93,41 @@ export default function Sidebar({
         }
     }, [isAddingGroup]);
 
-    const filtered = hosts.filter(h =>
+    const filtered = (hosts || []).filter(h =>
         h.name.toLowerCase().includes(search.toLowerCase()) ||
         h.host.includes(search)
     );
 
-    // Grouping logic: Start with all official groups, then add Ungrouped and any ad-hoc ones from hosts
+    // Grouping logic: Start with all official groups
     const groupedData = {};
 
     // 1. Add all groups from backend
-    groups.forEach(g => {
-        groupedData[g.name] = { id: g.id, hosts: [], isSystem: false };
+    (groups || []).forEach(g => {
+        if (g && g.name) {
+            groupedData[g.name] = { id: g.id, hosts: [], isSystem: false };
+        }
     });
 
-    // 2. Add Ungrouped
+    // 2. Add Ungrouped explicitly
     if (!groupedData["Ungrouped"]) {
         groupedData["Ungrouped"] = { id: "system-ungrouped", hosts: [], isSystem: true };
     }
 
-    // 3. Fill with hosts
+    // 3. Fill with hosts (match by name, case-insensitive for 'Ungrouped')
     filtered.forEach(h => {
-        const groupName = h.group || "Ungrouped";
-        if (!groupedData[groupName]) {
+        let groupName = h.group || "Ungrouped";
+
+        // Find existing group by name (case-insensitive)
+        const existingKey = Object.keys(groupedData).find(
+            k => k.toLowerCase() === groupName.toLowerCase()
+        );
+
+        if (existingKey) {
+            groupName = existingKey;
+        } else {
             groupedData[groupName] = { id: null, hosts: [], isSystem: true };
         }
+
         groupedData[groupName].hosts.push(h);
     });
 
@@ -141,11 +153,11 @@ export default function Sidebar({
     };
 
     const getSessionCount = (hostId) => {
-        return sessions.filter(s => s.host.id === hostId).length;
+        return sessions.filter(s => s.id === hostId || s.host?.id === hostId).length;
     };
 
     const getStatus = (host) => {
-        const session = sessions.find(s => s.host.id === host.id);
+        const session = sessions.find(s => s.host?.id === host.id);
         if (!session) return "offline";
         return session.connected ? "connected" : "error";
     };
@@ -153,7 +165,12 @@ export default function Sidebar({
     return (
         <div className="sidebar-container glass-panel" style={{ width: width }}>
             <div className="sidebar-header">
-                <h3>Hosts</h3>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                    <h3>Hosts</h3>
+                    <button onClick={onRefresh} className="icon-btn" title="Refresh">
+                        <FiRefreshCw size={14} />
+                    </button>
+                </div>
                 <div className="search-container">
                     <FiSearch size={14} color="var(--text-muted)" />
                     <input

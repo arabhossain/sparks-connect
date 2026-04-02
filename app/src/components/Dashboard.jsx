@@ -4,7 +4,7 @@ import { FiPlus, FiTerminal, FiZap, FiShield, FiCpu } from "react-icons/fi";
 import "../styles/dashboard.css";
 
 export default function Dashboard({ onAdd, onConnect, hosts }) {
-    const recentHosts = hosts.slice(0, 3); // Just a placeholder for "Recent"
+    const recentHosts = (hosts || []).slice(0, 3); // Just a placeholder for "Recent"
 
     return (
         <div className="dashboard-container">
