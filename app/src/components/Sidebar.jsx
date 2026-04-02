@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { FiSearch, FiPlus, FiTrash2, FiEdit2, FiTerminal, FiKey, FiUser, FiX, FiFolderPlus, FiCheck, FiRefreshCw } from "react-icons/fi";
+import { FiSearch, FiPlus, FiTrash2, FiEdit2, FiTerminal, FiKey, FiUser, FiX, FiFolderPlus, FiCheck, FiRefreshCw, FiLogOut } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import { DndContext, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
@@ -76,6 +76,7 @@ export default function Sidebar({
     const [collapsedFolders, setCollapsedFolders] = useState({});
     const [isAddingGroup, setIsAddingGroup] = useState(false);
     const [newGroupName, setNewGroupName] = useState("");
+    const [showUserMenu, setShowUserMenu] = useState(false);
     const groupInputRef = useRef(null);
     const username = localStorage.getItem("username");
 
@@ -291,11 +292,56 @@ export default function Sidebar({
             </DndContext>
 
             <div className="sidebar-footer">
-                <div className="user-info">
+                <div className="user-info" onClick={() => setShowUserMenu(!showUserMenu)}>
                     <FiUser size={16} />
-                    <span>{username}</span>
+                    <span className="user-name">{username || 'Guest'}</span>
                 </div>
-                <button onClick={onLogout} className="logout-btn">Logout</button>
+                <button onClick={onLogout} className="logout-btn" title="Logout">
+                    <FiLogOut size={16} />
+                </button>
+
+                <AnimatePresence>
+                    {showUserMenu && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            style={{
+                                position: 'absolute',
+                                bottom: '100%',
+                                left: '0',
+                                width: '100%',
+                                marginBottom: '12px',
+                                background: 'rgba(20, 20, 20, 0.95)',
+                                backdropFilter: 'blur(10px)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '12px',
+                                padding: '16px',
+                                zIndex: 100,
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+                            }}
+                        >
+                            <div style={{ paddingBottom: '12px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', marginBottom: '12px' }}>
+                                <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#fff' }}>{username || 'Guest'}</div>
+                                <div style={{ fontSize: '12px', color: '#9ca3af' }}>{username ? `${username}@sparksconnect.io` : 'guest@local'}</div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                                    <span style={{ color: '#9ca3af' }}>Account Type</span>
+                                    <span style={{ background: 'linear-gradient(135deg, #a855f7 0%, #f97316 100%)', WebkitBackgroundClip: 'text', color: 'transparent', fontWeight: 'bold' }}>PRO</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                                    <span style={{ color: '#9ca3af' }}>Team</span>
+                                    <span style={{ color: '#fff' }}>Personal Workspace</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                                    <span style={{ color: '#9ca3af' }}>API Route</span>
+                                    <span style={{ color: '#22c55e' }}>Healthy</span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );

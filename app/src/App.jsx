@@ -434,7 +434,10 @@ export default function App() {
                 <div className="background-blur blur-1"></div>
                 <div className="background-blur blur-2"></div>
                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="login-card glass-panel">
-                    <div className="login-header"><div className="login-logo">SparkConnect</div></div>
+                    <div className="login-header" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem'}}>
+                        <img src="/src/assets/logo.png" alt="Sparks Connect Logo" style={{width: '64px', height: '64px', borderRadius: '12px'}} />
+                        <div className="login-logo">Sparks Connect</div>
+                    </div>
                     <div className="login-form">
                         <div className="form-group"><label>Username</label><input value={username} onChange={e => setUsername(e.target.value)} /></div>
                         <div className="form-group"><label>Password</label><input type="password" value={password} onChange={e => setPassword(e.target.value)} /></div>

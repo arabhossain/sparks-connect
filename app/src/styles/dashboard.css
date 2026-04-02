@@ -130,3 +130,39 @@
     color: #3b82f6;
     font-weight: 600;
 }
+.dashboard-status-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.status-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 50px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 13px;
+    color: var(--text-secondary);
+    backdrop-filter: blur(10px);
+}
+
+.status-pill .pill-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-pill .online {
+    color: #22c55e;
+    font-weight: 600;
+}
+.status-pill.shield-pill .pill-icon {
+    color: #22c55e;
+}
+.status-pill.cpu-pill .pill-icon {
+    color: #3b82f6;
+}
