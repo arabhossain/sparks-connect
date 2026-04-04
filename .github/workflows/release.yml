@@ -34,7 +34,6 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          npm install
           cd app && npm install
           cd ../web && npm install
           cd ../backend && npm install
