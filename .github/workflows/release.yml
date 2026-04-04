@@ -61,16 +61,11 @@ jobs:
         shell: powershell
         run: |
           vcpkg install openssl:x64-windows-static-md zlib:x64-windows-static-md libssh2:x64-windows-static-md
+          vcpkg integrate install
 
           echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
           echo "VCPKGRS_TRIPLET=x64-windows-static-md" >> $env:GITHUB_ENV
-
-          echo "OPENSSL_DIR=$env:VCPKG_ROOT/installed/x64-windows-static-md" >> $env:GITHUB_ENV
-          echo "OPENSSL_LIB_DIR=$env:VCPKG_ROOT/installed/x64-windows-static-md/lib" >> $env:GITHUB_ENV
-          echo "OPENSSL_INCLUDE_DIR=$env:VCPKG_ROOT/installed/x64-windows-static-md/include" >> $env:GITHUB_ENV
-
-          echo "ZLIB_INCLUDE_DIR=$env:VCPKG_ROOT/installed/x64-windows-static-md/include" >> $env:GITHUB_ENV
-          echo "ZLIB_LIB_DIR=$env:VCPKG_ROOT/installed/x64-windows-static-md/lib" >> $env:GITHUB_ENV
+          echo "VCPKGRS_DYNAMIC=0" >> $env:GITHUB_ENV
 
       - name: Build Web Target
         run: cd web && npm run build
@@ -81,8 +76,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: './app'
-          tagName: SparksConnect-v__VERSION__
-          releaseName: 'Sparks Connect v__VERSION__'
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Sparks Connect ${{ github.ref_name }}'
           releaseBody: 'See the attached assets to download the full sparks connect client.'
           releaseDraft: true
           prerelease: false
