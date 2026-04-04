@@ -58,9 +58,19 @@ jobs:
 
       - name: Install dependencies (Windows only)
         if: matrix.platform == 'windows-latest'
+        shell: powershell
         run: |
-          vcpkg install openssl:x64-windows zlib:x64-windows
+          vcpkg install openssl:x64-windows-static-md zlib:x64-windows-static-md libssh2:x64-windows-static-md
+
           echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
+          echo "VCPKGRS_TRIPLET=x64-windows-static-md" >> $env:GITHUB_ENV
+
+          echo "OPENSSL_DIR=$env:VCPKG_ROOT/installed/x64-windows-static-md" >> $env:GITHUB_ENV
+          echo "OPENSSL_LIB_DIR=$env:VCPKG_ROOT/installed/x64-windows-static-md/lib" >> $env:GITHUB_ENV
+          echo "OPENSSL_INCLUDE_DIR=$env:VCPKG_ROOT/installed/x64-windows-static-md/include" >> $env:GITHUB_ENV
+
+          echo "ZLIB_INCLUDE_DIR=$env:VCPKG_ROOT/installed/x64-windows-static-md/include" >> $env:GITHUB_ENV
+          echo "ZLIB_LIB_DIR=$env:VCPKG_ROOT/installed/x64-windows-static-md/lib" >> $env:GITHUB_ENV
 
       - name: Build Web Target
         run: cd web && npm run build
