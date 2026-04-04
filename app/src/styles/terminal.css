@@ -21,6 +21,12 @@
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     align-items: center;
+    opacity: 0.15;
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.terminal-actions:hover {
+    opacity: 1;
 }
 
 .terminal-pane {
@@ -31,10 +37,6 @@
     overflow: hidden;
 }
 
-.terminal-pane.active {
-    border-color: var(--primary) !important;
-    box-shadow: 0 0 15px rgba(59, 130, 246, 0.15);
-}
 
 .context-menu {
     position: fixed;
@@ -104,5 +106,35 @@
 }
 
 .xterm-screen {
-    padding: 10px;
+    padding: 0px;
+}
+
+.terminal-window-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background: #050505;
+}
+
+.terminal-window {
+    width: 100%;
+    height: 100%;
+    background: #0a0b10;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 0, 0, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+
+.terminal-content {
+    flex: 1;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
 }

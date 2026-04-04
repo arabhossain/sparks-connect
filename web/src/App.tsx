@@ -8,7 +8,11 @@ import { Auth } from './pages/Auth'
 import { DashboardLayout } from './pages/dashboard/DashboardLayout'
 import { Hosts } from './pages/dashboard/Hosts'
 import { Team } from './pages/dashboard/Team'
-import { DashboardHome, Sessions, ActivityLogs, Settings } from './pages/dashboard/Placeholders'
+import { Overview as DashboardHome } from './pages/dashboard/Overview'
+import { Sessions } from './pages/dashboard/Sessions'
+import { ActivityLogs } from './pages/dashboard/ActivityLogs'
+import { SessionLogs } from './pages/dashboard/SessionLogs'
+import { Settings } from './pages/dashboard/Settings'
 
 function App() {
   return (
@@ -26,12 +30,13 @@ function App() {
         <Route path="/auth" element={<Auth />} />
 
         {/* Dashboard Application Routes */}
-        <Route path="/app" element={<DashboardLayout />}>
+        <Route path="/mypage" element={<DashboardLayout />}>
           <Route index element={<DashboardHome />} />
           <Route path="hosts" element={<Hosts />} />
           <Route path="sessions" element={<Sessions />} />
           <Route path="team" element={<Team />} />
           <Route path="logs" element={<ActivityLogs />} />
+          <Route path="logs/:sessionId" element={<SessionLogs />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>

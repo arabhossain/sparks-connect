@@ -6,16 +6,17 @@ import logoImg from '@/assets/logo.png'
 export function Sidebar() {
   const location = useLocation()
   
-  // Hardcoded for demo purposes
-  const isOrg = true;
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isOrg = user.role === 'organization_user' || user.role === 'owner';
+  const orgTitle = user.organizationName || (isOrg ? "Organization User" : "Hacker");
 
   const links = [
-    { to: '/app', icon: Activity, label: 'Dashboard' },
-    { to: '/app/hosts', icon: Server, label: 'Hosts' },
-    { to: '/app/sessions', icon: Terminal, label: 'Sessions' },
-    { to: '/app/logs', icon: Clock, label: 'Activity Logs' },
-    ...(isOrg ? [{ to: '/app/team', icon: Users, label: 'Team' }] : []),
-    { to: '/app/settings', icon: Settings, label: 'Settings' },
+    { to: '/mypage', icon: Activity, label: 'Dashboard' },
+    { to: '/mypage/hosts', icon: Server, label: 'Hosts' },
+    { to: '/mypage/sessions', icon: Terminal, label: 'Sessions' },
+    ...(user.permissions?.viewLogs !== false || !user.organizationId ? [{ to: '/mypage/logs', icon: Clock, label: 'Activity Logs' }] : []),
+    ...(isOrg ? [{ to: '/mypage/team', icon: Users, label: 'Team' }] : []),
+    { to: '/mypage/settings', icon: Settings, label: 'Settings' },
   ]
 
   return (
@@ -32,12 +33,12 @@ export function Sidebar() {
       {/* User profile small summary */}
       <div className="p-4 border-b border-border/50">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-sm font-medium">
-            JD
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-sm font-medium uppercase">
+            {user.username ? user.username.charAt(0) : 'U'}
           </div>
           <div className="overflow-hidden cursor-default">
-            <p className="text-sm font-medium truncate">John Doe</p>
-            <p className="text-xs text-muted-foreground truncate">{isOrg ? 'Acme Corp' : 'Individual'}</p>
+            <p className="text-sm font-medium truncate">{user.username || 'User'}</p>
+            <p className="text-xs text-muted-foreground truncate">{orgTitle}</p>
           </div>
         </div>
       </div>
@@ -45,7 +46,7 @@ export function Sidebar() {
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {links.map((link) => {
           const Icon = link.icon
-          const isActive = location.pathname === link.to || (location.pathname.startsWith(link.to) && link.to !== '/app')
+          const isActive = location.pathname === link.to || (location.pathname.startsWith(link.to) && link.to !== '/mypage')
           return (
             <Link
               key={link.to}
@@ -65,11 +66,20 @@ export function Sidebar() {
       </nav>
       
       <div className="p-4 border-t border-border mt-auto">
-        <div className="glass-panel text-xs p-3 flex flex-col space-y-2">
+        <div className="glass-panel text-xs p-3 flex flex-col space-y-4">
           <div className="flex justify-between items-center text-muted-foreground">
             <span>Sync</span>
             <span className="flex items-center text-green-400"><div className="w-1.5 h-1.5 rounded-full bg-green-400 mr-1.5"></div> Online</span>
           </div>
+          <button 
+            onClick={() => {
+              localStorage.clear();
+              window.location.href = '/auth';
+            }}
+            className="flex items-center justify-center w-full py-2 rounded bg-white/5 hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors border border-white/5 hover:border-red-500/30 font-medium"
+          >
+            Logout
+          </button>
         </div>
       </div>
     </aside>

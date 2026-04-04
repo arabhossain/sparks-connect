@@ -22,12 +22,20 @@ export function Navbar() {
             <Link to="/download" className="text-sm text-foreground/80 hover:text-foreground transition-colors">Download</Link>
           </div>
           <div className="flex items-center space-x-4">
-            <Link to="/auth">
-              <Button variant="ghost" className="text-sm">Sign In</Button>
-            </Link>
-            <Link to="/auth?register=true">
-              <Button className="text-sm shadow-glow-primary">Get Started</Button>
-            </Link>
+            {localStorage.getItem('token') ? (
+              <Link to="/mypage">
+                <Button className="text-sm shadow-glow-primary">My Page</Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/auth">
+                  <Button variant="ghost" className="text-sm">Sign In</Button>
+                </Link>
+                <Link to="/auth?register=true">
+                  <Button className="text-sm shadow-glow-primary">Get Started</Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

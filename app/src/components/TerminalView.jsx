@@ -11,6 +11,11 @@ export default function TerminalView({ session, isVisible = true }) {
     const ref = useRef(null);
     const termInstance = useRef(null);
     const fitAddonRef = useRef(null);
+    const sessionRef = useRef(session);
+
+    useEffect(() => {
+        sessionRef.current = session;
+    }, [session]);
 
     const [menu, setMenu] = useState(null);
 
@@ -25,11 +30,11 @@ export default function TerminalView({ session, isVisible = true }) {
             theme: {
                 background: "#0a0b10", // Match var(--bg-primary)
                 foreground: "#f8fafc", // Match var(--text-primary)
-                cursor: "#3b82f6",     // Match var(--primary)
+                cursor: "#737373",     // Subtle grey cursor like screenshot
                 selection: "rgba(59, 130, 246, 0.3)",
                 black: "#1e293b",
                 red: "#ef4444",
-                green: "#10b981",
+                green: "#27c93f",      // Bright terminal green
                 yellow: "#f59e0b",
                 blue: "#3b82f6",
                 magenta: "#8b5cf6",
@@ -67,12 +72,46 @@ export default function TerminalView({ session, isVisible = true }) {
             unlistenFn = unlisten;
         });
 
+        let commandBuffer = "";
+
         // Send keyboard input to backend
         term.onData((data) => {
             invoke("ssh_write", {
                 sessionId: session.id,
                 input: data,
             });
+
+            if (data === '\r') {
+                if (commandBuffer.trim().length > 0) {
+                    let deviceId = localStorage.getItem("deviceId");
+                    if (!deviceId) {
+                        deviceId = crypto.randomUUID();
+                        localStorage.setItem("deviceId", deviceId);
+                    }
+                    fetch("http://localhost:4000/telemetry/log", {
+                        method: "POST",
+                        headers: { 
+                            "Content-Type": "application/json", 
+                            "Authorization": "Bearer " + localStorage.getItem("token") 
+                        },
+                        body: JSON.stringify({ 
+                            action: "COMMAND", 
+                            sessionId: sessionRef.current.serverId,
+                            details: {
+                                command: commandBuffer.trim(),
+                                deviceId,
+                                hostId: sessionRef.current.host?.id,
+                                hostName: sessionRef.current.host?.name
+                            }
+                        })
+                    }).catch(() => {});
+                }
+                commandBuffer = "";
+            } else if (data === '\x7f') { // backspace
+                commandBuffer = commandBuffer.slice(0, -1);
+            } else {
+                commandBuffer += data;
+            }
         });
 
         // Use ResizeObserver for more robust resizing
@@ -188,12 +227,18 @@ export default function TerminalView({ session, isVisible = true }) {
             className="terminal-container"
             onContextMenu={handleContextMenu}
             onMouseDown={handleMouseDown}
+            style={{ background: "#050505" }}
         >
-            {/* Terminal */}
-            <div
-                ref={ref}
-                style={{ width: "100%", height: "100%" }}
-            />
+            <div className="terminal-window-wrapper">
+                <div className="terminal-window">
+                    <div className="terminal-content">
+                        <div
+                            ref={ref}
+                            style={{ width: "100%", height: "100%" }}
+                        />
+                    </div>
+                </div>
+            </div>
 
             {/* Context Menu */}
             {menu && (

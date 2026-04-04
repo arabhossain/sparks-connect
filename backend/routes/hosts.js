@@ -13,23 +13,31 @@ const router = express.Router();
  */
 router.get("/", auth, async (req, res) => {
     try {
-        const userId = req.user.id;
+        let hosts = [];
 
-        const [hosts] = await db.query(
-            "SELECT * FROM hosts WHERE ownerId = ? OR isShared = 1",
-            [userId]
-        );
+        if (req.user.role === 'team_mate' && req.user.organizationId) {
+            const [orgRows] = await db.query("SELECT ownerId FROM organizations WHERE id = ?", [req.user.organizationId]);
+            if (orgRows.length > 0) {
+                const [rows] = await db.query(`
+                    SELECT DISTINCT h.*
+                    FROM hosts h
+                    JOIN team_group_hosts tgh ON h.id = tgh.hostId
+                    JOIN team_group_members tgm ON tgh.groupId = tgm.groupId
+                    WHERE h.ownerId = ? AND tgm.userId = ?
+                `, [orgRows[0].ownerId, req.user.id]);
+                hosts = rows;
+            }
+        } else {
+            const [rows] = await db.query(
+                "SELECT * FROM hosts WHERE ownerId = ?",
+                [req.user.id]
+            );
+            hosts = rows;
+        }
 
         const result = [];
 
         for (const host of hosts) {
-            const [tags] = await db.query(
-                `SELECT t.name FROM tags t
-                                        JOIN host_tags ht ON t.id = ht.tagId
-                 WHERE ht.hostId = ?`,
-                [host.id]
-            );
-
             let jumpHost = null;
             if (host.jumpHostId) {
                 const [jump] = await db.query(
@@ -46,9 +54,6 @@ router.get("/", auth, async (req, res) => {
                 password: host.passwordEnc ? decrypt(host.passwordEnc) : null,
                 sshKey: host.sshKeyEnc ? decrypt(host.sshKeyEnc) : null,
                 passphrase: host.passphraseEnc ? decrypt(host.passphraseEnc) : null,
-
-                // 🏷 tags
-                tags: tags.map(t => t.name),
 
                 // 🔗 jump host object
                 jumpHost,
@@ -73,7 +78,17 @@ router.get("/", auth, async (req, res) => {
  */
 router.post("/", auth, async (req, res) => {
     try {
-        const userId = req.user.id;
+        let finalOwnerId = req.user.id;
+
+        if (req.user.role === 'team_mate' && req.user.organizationId) {
+            if (!req.user.permissions?.createHost) {
+                return res.status(403).json({ error: "Forbidden: You don't have permission to create hosts." });
+            }
+            const [orgRows] = await db.query("SELECT ownerId FROM organizations WHERE id = ?", [req.user.organizationId]);
+            if (orgRows.length > 0) {
+                finalOwnerId = orgRows[0].ownerId;
+            }
+        }
 
         const {
             name,
@@ -94,7 +109,6 @@ router.post("/", auth, async (req, res) => {
 
             group,
             description,
-            tags = [],
             isShared = false,
             jumpHostId = null
         } = req.body;
@@ -105,7 +119,7 @@ router.post("/", auth, async (req, res) => {
             `INSERT INTO hosts
              (id, name, host, port, user, authType,
               passwordEnc, sshKeyEnc, passphraseEnc,
-              identityFile, identitiesOnly, proxyCommand, proxyJump, "group",
+              identityFile, identitiesOnly, proxyCommand, proxyJump, \`group\`,
               description, ownerId, isShared, jumpHostId)
 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -127,33 +141,11 @@ router.post("/", auth, async (req, res) => {
                 proxyJump || null,
                 group || null,
                 description,
-                userId,
+                finalOwnerId,
                 isShared ? 1 : 0,
                 jumpHostId || null
             ]
         );
-
-        // 🏷 TAGS
-        for (const tag of tags) {
-            const tagId = crypto.randomUUID();
-
-            await db.query(
-                "INSERT IGNORE INTO tags (id, name) VALUES (?, ?)",
-                [tagId, tag]
-            );
-
-            const [t] = await db.query(
-                "SELECT id FROM tags WHERE name = ?",
-                [tag]
-            );
-
-            if (t.length) {
-                await db.query(
-                    "INSERT INTO host_tags (hostId, tagId) VALUES (?, ?)",
-                    [id, t[0].id]
-                );
-            }
-        }
 
         res.json({ id });
 

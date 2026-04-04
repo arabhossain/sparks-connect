@@ -19,7 +19,7 @@ import "./styles/global.css";
 import "./styles/tabs.css";
 import "./styles/login.css";
 
-const API = "https://sparkconnect.codesparks.me";
+const API = "http://localhost:4000";
 
 export default function App() {
     const [token, setToken] = useState(localStorage.getItem("token"));
@@ -150,6 +150,19 @@ export default function App() {
             notify.dismiss(loadingToast);
             notify.success(`Connected to ${host.host}`);
             setSessions(prev => prev.map(s => s.id === id ? { ...s, connected: true, reconnecting: false } : s));
+
+            fetch(API + "/telemetry/session", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                body: JSON.stringify({ hostId: host.id, status: 'active' })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.id) {
+                    setSessions(prev => prev.map(s => s.id === id ? { ...s, serverId: data.id } : s));
+                }
+            })
+            .catch(e => console.error("Telemetry session error", e));
         } catch (err) {
             notify.dismiss(loadingToast);
             notify.error(`Failed to connect: ${host.host}`);
@@ -158,6 +171,15 @@ export default function App() {
     };
 
     const closeSession = async (sessionId) => {
+        const session = sessions.find(s => s.id === sessionId);
+        if (session) {
+            fetch(API + "/telemetry/session", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                body: JSON.stringify({ hostId: session.host.id, status: 'inactive' })
+            }).catch(e => console.error("Telemetry close error", e));
+        }
+
         try {
             await invoke("ssh_disconnect", { sessionId });
         } catch { }
@@ -198,7 +220,14 @@ export default function App() {
 
     const closeHostSessions = (hostId) => {
         const toClose = sessions.filter(s => s.host.id === hostId);
-        toClose.forEach(s => invoke("ssh_disconnect", { sessionId: s.id }));
+        toClose.forEach(s => {
+            fetch(API + "/telemetry/session", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                body: JSON.stringify({ hostId: s.host.id, status: 'inactive' })
+            }).catch(() => {});
+            invoke("ssh_disconnect", { sessionId: s.id });
+        });
         setSessions(prev => {
             const updated = prev.filter(s => s.host.id !== hostId);
             if (!updated.find(s => s.id === activeSession)) setActiveSession(updated[0]?.id || null);
@@ -209,20 +238,41 @@ export default function App() {
 
     const tabActions = {
         closeAll: () => {
-            sessions.forEach(s => invoke("ssh_disconnect", { sessionId: s.id }));
+            sessions.forEach(s => {
+                fetch(API + "/telemetry/session", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                    body: JSON.stringify({ hostId: s.host.id, status: 'inactive' })
+                }).catch(() => {});
+                invoke("ssh_disconnect", { sessionId: s.id });
+            });
             setSessions([]);
             setActiveSession(null);
         },
         closeOthers: (id) => {
             const others = sessions.filter(s => s.id !== id);
-            others.forEach(s => invoke("ssh_disconnect", { sessionId: s.id }));
+            others.forEach(s => {
+                fetch(API + "/telemetry/session", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                    body: JSON.stringify({ hostId: s.host.id, status: 'inactive' })
+                }).catch(() => {});
+                invoke("ssh_disconnect", { sessionId: s.id });
+            });
             setSessions(sessions.filter(s => s.id === id));
             setActiveSession(id);
         },
         closeRight: (id) => {
             const idx = sessions.findIndex(s => s.id === id);
             const toClose = sessions.slice(idx + 1);
-            toClose.forEach(s => invoke("ssh_disconnect", { sessionId: s.id }));
+            toClose.forEach(s => {
+                fetch(API + "/telemetry/session", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                    body: JSON.stringify({ hostId: s.host.id, status: 'inactive' })
+                }).catch(() => {});
+                invoke("ssh_disconnect", { sessionId: s.id });
+            });
             const remaining = sessions.slice(0, idx + 1);
             setSessions(remaining);
             if (!remaining.find(s => s.id === activeSession)) setActiveSession(id);
@@ -230,7 +280,14 @@ export default function App() {
         closeLeft: (id) => {
             const idx = sessions.findIndex(s => s.id === id);
             const toClose = sessions.slice(0, idx);
-            toClose.forEach(s => invoke("ssh_disconnect", { sessionId: s.id }));
+            toClose.forEach(s => {
+                fetch(API + "/telemetry/session", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                    body: JSON.stringify({ hostId: s.host.id, status: 'inactive' })
+                }).catch(() => {});
+                invoke("ssh_disconnect", { sessionId: s.id });
+            });
             const remaining = sessions.slice(idx);
             setSessions(remaining);
             if (!remaining.find(s => s.id === activeSession)) setActiveSession(id);
@@ -435,8 +492,8 @@ export default function App() {
                 <div className="background-blur blur-1"></div>
                 <div className="background-blur blur-2"></div>
                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="login-card glass-panel">
-                    <div className="login-header" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem'}}>
-                        <img src={logoImg} alt="Sparks Connect Logo" style={{width: '64px', height: '64px', borderRadius: '12px'}} />
+                    <div className="login-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                        <img src={logoImg} alt="Sparks Connect Logo" style={{ width: '64px', height: '64px', borderRadius: '12px' }} />
                         <div className="login-logo">Sparks Connect</div>
                     </div>
                     <div className="login-form">

@@ -12,13 +12,34 @@ export function Auth() {
   const isRegistering = searchParams.get('register') === 'true'
   const [step, setStep] = useState(isRegistering ? 1 : 0) // 0 = login, 1 = register step 1, 2 = register step 2
   const [accountType, setAccountType] = useState<'individual' | 'organization' | null>(null)
+  const [orgName, setOrgName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   
   const navigate = useNavigate()
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Simulated auth
-    navigate('/app/hosts')
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: email, password })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Login failed')
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      navigate('/mypage/hosts')
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleRegisterNext = (e: React.FormEvent) => {
@@ -26,9 +47,28 @@ export function Auth() {
     setStep(2)
   }
 
-  const handleCompleteRegistration = (e: React.FormEvent) => {
+  const handleCompleteRegistration = async (e: React.FormEvent) => {
     e.preventDefault()
-    navigate('/app/hosts')
+    setLoading(true)
+    setError('')
+    try {
+      // Map frontend accountType to database role
+      const role = accountType === 'organization' ? 'organization_user' : 'team_mate'
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: email, password, role, orgName })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Registration failed')
+      localStorage.setItem('token', data.token)
+      localStorage.setItem('user', JSON.stringify(data.user))
+      navigate('/mypage/hosts')
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -58,21 +98,24 @@ export function Auth() {
                   <CardDescription>Enter your credentials to access your vault</CardDescription>
                 </CardHeader>
                 <form onSubmit={handleLogin}>
+                  {error && <div className="text-red-500 text-sm text-center mb-4">{error}</div>}
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-foreground/80">Email</label>
-                      <Input type="email" placeholder="you@example.com" required />
+                      <Input type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
                         <label className="text-sm font-medium text-foreground/80">Password</label>
                         <a href="#" className="text-xs text-primary hover:text-primary-light">Forgot password?</a>
                       </div>
-                      <Input type="password" placeholder="••••••••" required />
+                      <Input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
                     </div>
                   </CardContent>
                   <CardFooter className="flex flex-col space-y-4">
-                    <Button type="submit" className="w-full shadow-glow-primary">Sign In</Button>
+                    <Button type="submit" disabled={loading} className="w-full shadow-glow-primary">
+                      {loading ? 'Signing In...' : 'Sign In'}
+                    </Button>
                     <div className="text-sm text-center text-muted-foreground">
                       Don't have an account? <button type="button" onClick={() => setStep(1)} className="text-primary hover:text-primary-light underline-offset-4 hover:underline">Sign up</button>
                     </div>
@@ -98,11 +141,11 @@ export function Auth() {
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-foreground/80">Email</label>
-                      <Input type="email" placeholder="you@example.com" required />
+                      <Input type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-foreground/80">Password</label>
-                      <Input type="password" placeholder="••••••••" required />
+                      <Input type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
                     </div>
                   </CardContent>
                   <CardFooter className="flex flex-col space-y-4">
@@ -129,6 +172,7 @@ export function Auth() {
                   <CardDescription>Step 2 of 2: How will you use Sparks Connect?</CardDescription>
                 </CardHeader>
                 <form onSubmit={handleCompleteRegistration}>
+                  {error && <div className="text-red-500 text-sm text-center mb-4">{error}</div>}
                   <CardContent className="space-y-4">
                     <div 
                       className={cn("p-4 rounded-xl border cursor-pointer transition-all", accountType === 'individual' ? "bg-primary/10 border-primary" : "bg-black/40 border-white/10 hover:border-white/30")}
@@ -154,14 +198,16 @@ export function Auth() {
                           className="space-y-2 mt-4"
                         >
                           <label className="text-sm font-medium text-foreground/80">Organization Name</label>
-                          <Input type="text" placeholder="Acme Corp" required />
+                          <Input type="text" placeholder="Acme Corp" value={orgName} onChange={e => setOrgName(e.target.value)} required={accountType === 'organization'} />
                         </motion.div>
                       )}
                     </AnimatePresence>
                   </CardContent>
                   <CardFooter className="flex space-x-4">
                     <Button type="button" variant="ghost" onClick={() => setStep(1)}>Back</Button>
-                    <Button type="submit" className="w-full shadow-glow-primary" disabled={!accountType}>Complete Setup</Button>
+                    <Button type="submit" className="w-full shadow-glow-primary" disabled={!accountType || loading}>
+                      {loading ? 'Completing...' : 'Complete Setup'}
+                    </Button>
                   </CardFooter>
                 </form>
               </Card>

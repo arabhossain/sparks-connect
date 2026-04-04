@@ -1,23 +1,39 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Terminal, Plus, Search, MoreVertical, Lock, Shield, Server } from 'lucide-react'
+import { Terminal, Search, MoreVertical, Lock, Shield, Server } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
 export function Hosts() {
   const [filter, setFilter] = useState('')
   const [activeTab, setActiveTab] = useState<'all' | 'personal' | 'shared'>('all')
+  const [hosts, setHosts] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  
 
-  const hosts = [
-    { id: 1, name: 'Production Web 01', ip: '10.0.1.15', user: 'root', type: 'shared', status: 'online', os: 'ubuntu' },
-    { id: 2, name: 'Production DB Primary', ip: '10.0.1.20', user: 'admin', type: 'shared', status: 'online', os: 'debian' },
-    { id: 3, name: 'Staging API', ip: '10.0.2.55', user: 'deploy', type: 'shared', status: 'offline', os: 'ubuntu' },
-    { id: 4, name: 'Personal Raspberry Pi', ip: '192.168.1.100', user: 'pi', type: 'personal', status: 'online', os: 'debian' },
-  ]
+
+
+
+  const fetchHosts = async () => {
+    try {
+      const res = await fetch('/api/hosts', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }})
+      if (res.ok) setHosts(await res.json())
+    } catch (err) { console.error(err) } finally { setLoading(false) }
+  }
+
+  useEffect(() => {
+    fetchHosts()
+  }, [])
+
+
+
+  const userStr = localStorage.getItem('user')
+  const user = userStr ? JSON.parse(userStr) : {}
+  const showTabs = user.organizationId != null
 
   const filteredHosts = hosts.filter((host) => {
-    if (activeTab !== 'all' && host.type !== activeTab) return false
+    if (showTabs && activeTab !== 'all' && host.type !== activeTab) return false
     if (filter && !host.name.toLowerCase().includes(filter.toLowerCase()) && !host.ip.includes(filter)) return false
     return true
   })
@@ -29,28 +45,28 @@ export function Hosts() {
           <h1 className="text-3xl font-bold tracking-tight">Hosts</h1>
           <p className="text-muted-foreground mt-1">Manage your infrastructure connections</p>
         </div>
-        <Button className="shadow-glow-primary">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Host
-        </Button>
       </div>
 
-      <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 justify-between items-center bg-black/20 p-2 rounded-xl border border-white/5">
-        <div className="flex space-x-1">
-          {['all', 'personal', 'shared'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab as any)}
-              className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize",
-                activeTab === tab ? "bg-card text-white shadow-md border border-white/10" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-              )}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-        <div className="relative w-full sm:w-64">
+
+
+      <div className={cn("flex flex-col sm:flex-row space-y-4 sm:space-y-0 items-center bg-black/20 p-2 rounded-xl border border-white/5", showTabs ? "justify-between" : "justify-end")}>
+        {showTabs && (
+          <div className="flex space-x-1">
+            {['all', 'personal', 'shared'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab as any)}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize",
+                  activeTab === tab ? "bg-card text-white shadow-md border border-white/10" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                )}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className={cn("relative w-full", showTabs ? "sm:w-64" : "")}>
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input 
             placeholder="Search hosts..." 
@@ -104,7 +120,15 @@ export function Hosts() {
           </Card>
         ))}
 
-        {filteredHosts.length === 0 && (
+        {loading && (
+          <div className="col-span-full py-12 text-center border-2 border-dashed border-border rounded-xl">
+            <Server className="w-10 h-10 mx-auto text-muted-foreground mb-4 opacity-50 animate-pulse" />
+            <h3 className="text-lg font-medium">Loading hosts...</h3>
+            <p className="text-muted-foreground mt-1">Connecting to your vault</p>
+          </div>
+        )}
+
+        {!loading && filteredHosts.length === 0 && (
           <div className="col-span-full py-12 text-center border-2 border-dashed border-border rounded-xl">
             <Server className="w-10 h-10 mx-auto text-muted-foreground mb-4 opacity-50" />
             <h3 className="text-lg font-medium">No hosts found</h3>

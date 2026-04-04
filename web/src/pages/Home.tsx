@@ -40,17 +40,28 @@ export function Home() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4"
           >
-            <Link to="/download">
-              <Button size="lg" className="h-14 px-8 text-lg w-full sm:w-auto">
-                Download Now
-              </Button>
-            </Link>
-            <Link to="/auth?register=true">
-              <Button size="lg" variant="glass" className="h-14 px-8 text-lg w-full sm:w-auto">
-                Get Started
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </Link>
+            {localStorage.getItem('token') ? (
+              <Link to="/mypage">
+                <Button size="lg" variant="glass" className="h-14 px-8 text-lg w-full sm:w-auto">
+                  Enter My Page
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/download">
+                  <Button size="lg" className="h-14 px-8 text-lg w-full sm:w-auto">
+                    Download Now
+                  </Button>
+                </Link>
+                <Link to="/auth?register=true">
+                  <Button size="lg" variant="glass" className="h-14 px-8 text-lg w-full sm:w-auto">
+                    Get Started
+                    <ArrowRight className="ml-2 w-5 h-5" />
+                  </Button>
+                </Link>
+              </>
+            )}
           </motion.div>
         </div>
 

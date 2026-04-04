@@ -33,7 +33,7 @@ export default function TerminalGrid({ sessions, visibleIds, activeId, layout, o
                             height: "100%",
                             width: "100%",
                             background: "var(--background)",
-                            border: s.id === activeId ? "2px solid var(--primary)" : "2px solid transparent",
+                            border: s.id === (layout === "single") && activeId ? "2px solid var(--primary)" : "2px solid transparent",
                             transition: "border-color 0.2s ease"
                         }}
                     >
