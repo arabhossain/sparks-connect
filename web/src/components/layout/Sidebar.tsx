@@ -6,7 +6,7 @@ import logoImg from '@/assets/logo.png'
 export function Sidebar() {
   const location = useLocation()
   
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const user = JSON.parse(localStorage.getItem('user') || '{}') || {};
   const isOrg = user.role === 'organization_user' || user.role === 'individual';
   const orgTitle = user.organizationName || (isOrg ? "Organization User" : "Hacker");
 

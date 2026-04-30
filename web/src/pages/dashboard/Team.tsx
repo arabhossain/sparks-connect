@@ -16,7 +16,7 @@ export function Team() {
   const [inviteMessage, setInviteMessage] = useState<{ err?: string, success?: string }>({})
   const [activeMember, setActiveMember] = useState<any>(null)
 
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const user = JSON.parse(localStorage.getItem('user') || '{}') || {};
   if (user.role !== 'individual' && user.role !== 'organization_user') {
     return (
       <div className="py-12 space-y-4 text-center">

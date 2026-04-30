@@ -10,7 +10,7 @@ export function Settings() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState('')
 
-  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const user = JSON.parse(localStorage.getItem('user') || '{}') || {}
   const [orgName, setOrgName] = useState(user.organizationName || '')
   const [isOrgSubmitting, setIsOrgSubmitting] = useState(false)
   const [orgMessage, setOrgMessage] = useState('')

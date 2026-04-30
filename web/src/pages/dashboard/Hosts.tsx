@@ -29,7 +29,7 @@ export function Hosts() {
 
 
   const userStr = localStorage.getItem('user')
-  const user = userStr ? JSON.parse(userStr) : {}
+  const user = userStr && userStr !== 'null' ? JSON.parse(userStr) : {}
   const showTabs = user.organizationId != null
 
   const filteredHosts = hosts.filter((host) => {
