@@ -17,7 +17,7 @@ export function Auth() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  
+
   const navigate = useNavigate()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -53,7 +53,7 @@ export function Auth() {
     setError('')
     try {
       // Map frontend accountType to database role
-      const role = accountType === 'organization' ? 'organization_user' : 'team_mate'
+      const role = accountType === 'organization' ? 'organization_user' : 'individual'
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -174,26 +174,26 @@ export function Auth() {
                 <form onSubmit={handleCompleteRegistration}>
                   {error && <div className="text-red-500 text-sm text-center mb-4">{error}</div>}
                   <CardContent className="space-y-4">
-                    <div 
+                    <div
                       className={cn("p-4 rounded-xl border cursor-pointer transition-all", accountType === 'individual' ? "bg-primary/10 border-primary" : "bg-black/40 border-white/10 hover:border-white/30")}
                       onClick={() => setAccountType('individual')}
                     >
                       <h3 className="font-semibold mb-1 text-foreground">Individual</h3>
                       <p className="text-sm text-muted-foreground">For personal projects and standalone servers.</p>
                     </div>
-                    <div 
+                    <div
                       className={cn("p-4 rounded-xl border cursor-pointer transition-all", accountType === 'organization' ? "bg-accent/10 border-accent" : "bg-black/40 border-white/10 hover:border-white/30")}
                       onClick={() => setAccountType('organization')}
                     >
                       <h3 className="font-semibold mb-1 text-foreground">Organization</h3>
                       <p className="text-sm text-muted-foreground">For teams who need to collaborate on infrastructure.</p>
                     </div>
-                    
+
                     <AnimatePresence>
                       {accountType === 'organization' && (
-                        <motion.div 
-                          initial={{ opacity: 0, height: 0 }} 
-                          animate={{ opacity: 1, height: 'auto' }} 
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
                           className="space-y-2 mt-4"
                         >

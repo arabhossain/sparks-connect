@@ -41,7 +41,7 @@ const SessionModel = {
         if (userRole === 'organization_user') {
             query += " AND u.organizationId = ?";
             params.push(organizationId);
-        } else if (userRole !== 'owner') {
+        } else if (userRole !== 'individual') {
             query += " AND s.userId = ?";
             params.push(userId);
         }

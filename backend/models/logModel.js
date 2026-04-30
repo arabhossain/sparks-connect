@@ -20,7 +20,7 @@ const LogModel = {
         if (userRole === 'organization_user') {
             query += " AND u.organizationId = ?";
             params.push(organizationId);
-        } else if (userRole !== 'owner') {
+        } else if (userRole !== 'individual') {
             query += " AND l.userId = ?";
             params.push(userId);
         }
@@ -48,7 +48,7 @@ const LogModel = {
         if (userRole === 'organization_user') {
             query += " AND u.organizationId = ?";
             params.push(organizationId);
-        } else if (userRole !== 'owner') {
+        } else if (userRole !== 'individual') {
             query += " AND l.userId = ?";
             params.push(userId);
         }

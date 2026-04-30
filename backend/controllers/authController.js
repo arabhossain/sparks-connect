@@ -12,7 +12,7 @@ const AuthController = {
             const id = crypto.randomUUID();
             const hash = await bcrypt.hash(password, 10);
 
-            await UserModel.createUser(id, username, hash);
+            await UserModel.createUser(id, username, hash, 'individual');
 
             res.json({ id, username });
         } catch (err) {
@@ -51,7 +51,7 @@ const AuthController = {
                 if (org) {
                     organizationName = org.name;
                 }
-            } else if (user.role === 'owner') {
+            } else if (user.role === 'individual') {
                 const org = await OrganizationModel.getOrganizationByOwnerId(user.id);
                 if (org) {
                     organizationName = org.name;

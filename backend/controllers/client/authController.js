@@ -66,7 +66,7 @@ const ClientAuthController = {
             if (user.organizationId) {
                 const org = await OrganizationModel.getOrganizationById(user.organizationId);
                 if (org) organizationName = org.name;
-            } else if (user.role === 'owner') {
+            } else if (user.role === 'individual') {
                 const org = await OrganizationModel.getOrganizationByOwnerId(user.id);
                 if (org) organizationName = org.name;
             }
@@ -108,7 +108,7 @@ const ClientAuthController = {
 
     updateOrganization: async (req, res) => {
         const { name } = req.body;
-        if (req.user.role !== 'organization_user' && req.user.role !== 'owner') {
+        if (req.user.role !== 'organization_user' && req.user.role !== 'individual') {
             return res.status(403).json({ error: "Forbidden: Only organization owners can change the organization name" });
         }
         try {

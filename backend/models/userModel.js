@@ -1,10 +1,10 @@
 const db = require("../db");
 
 const UserModel = {
-    createUser: async (id, username, hash) => {
+    createUser: async (id, username, hash, role) => {
         await db.query(
-            "INSERT INTO users (id, username, password) VALUES (?, ?, ?)",
-            [id, username, hash]
+            "INSERT INTO users (id, username, password, role) VALUES (?, ?, ?, ?)",
+            [id, username, hash, role || 'individual']
         );
     },
 

@@ -17,7 +17,7 @@ export function Team() {
   const [activeMember, setActiveMember] = useState<any>(null)
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  if (user.role !== 'owner' && user.role !== 'organization_user') {
+  if (user.role !== 'individual' && user.role !== 'organization_user') {
     return (
       <div className="py-12 space-y-4 text-center">
         <h2 className="text-2xl font-bold">Organization Feature</h2>

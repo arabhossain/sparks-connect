@@ -24,7 +24,7 @@ const ClientUserController = {
     },
 
     getAllUsers: async (req, res) => {
-        if (req.user.role !== 'organization_user' && req.user.role !== 'owner') {
+        if (req.user.role !== 'organization_user' && req.user.role !== 'individual') {
             return res.status(403).json({ error: "Forbidden" });
         }
         try {

@@ -12,7 +12,7 @@ const ClientTeamController = {
             
             const uiMapped = rows.map(r => {
                 let uiRole = 'Member';
-                if (r.role === 'organization_user' || r.role === 'owner') uiRole = 'Admin';
+                if (r.role === 'organization_user' || r.role === 'individual') uiRole = 'Admin';
                 
                 return {
                     id: r.id,
