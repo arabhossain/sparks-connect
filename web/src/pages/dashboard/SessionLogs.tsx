@@ -18,18 +18,18 @@ export function SessionLogs() {
         const qs = new URLSearchParams({ page: page.toString() })
         if (search) qs.append('search', search)
 
-        fetch(`/api/logs/session/${sessionId}?${qs.toString()}`, {
+        fetch(`/api/client/logs/session/${sessionId}?${qs.toString()}`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         })
-        .then(res => res.json())
-        .then(data => {
-            if (data.data) {
-                setLogs(data.data)
-                setMeta(data.meta)
-            }
-        })
-        .catch(console.error)
-        .finally(() => setLoading(false))
+            .then(res => res.json())
+            .then(data => {
+                if (data.data) {
+                    setLogs(data.data)
+                    setMeta(data.meta)
+                }
+            })
+            .catch(console.error)
+            .finally(() => setLoading(false))
     }
 
     useEffect(() => {
@@ -44,11 +44,11 @@ export function SessionLogs() {
                     Back to History
                 </Link>
             </div>
-            
+
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight flex items-center">
-                        <Activity className="mr-3 w-8 h-8 text-primary"/> Session Inspect
+                        <Activity className="mr-3 w-8 h-8 text-primary" /> Session Inspect
                     </h1>
                     <p className="text-muted-foreground mt-1 text-xs md:text-sm font-mono break-all">
                         {sessionId}
@@ -56,8 +56,8 @@ export function SessionLogs() {
                 </div>
                 <div className="relative w-full md:w-72">
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <Input 
-                        placeholder="Filter specific commands..." 
+                    <Input
+                        placeholder="Filter specific commands..."
                         value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                         className="pl-9 h-10 border-white/10 bg-black/40"
                     />
@@ -69,7 +69,7 @@ export function SessionLogs() {
                     <span className="text-sm font-medium text-muted-foreground">Recorded Telemetry Output</span>
                     {loading && <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />}
                 </div>
-                
+
                 <div className="flex-1 p-4 space-y-2">
                     {loading && logs.length === 0 ? (
                         <div className="py-24 text-center text-muted-foreground animate-pulse">Establishing log stream...</div>
@@ -101,16 +101,16 @@ export function SessionLogs() {
                             Viewing page {meta.page} of {meta.pages} ({meta.total} captures)
                         </span>
                         <div className="flex gap-2">
-                            <Button 
-                                variant="outline" size="sm" 
+                            <Button
+                                variant="outline" size="sm"
                                 disabled={meta.page <= 1}
                                 onClick={() => fetchLogs(meta.page - 1, debouncedSearch)}
                                 className="bg-transparent border-white/10 hover:bg-white/5"
                             >
                                 <ChevronLeft className="w-4 h-4 mr-1" /> Prev
                             </Button>
-                            <Button 
-                                variant="outline" size="sm" 
+                            <Button
+                                variant="outline" size="sm"
                                 disabled={meta.page >= meta.pages}
                                 onClick={() => fetchLogs(meta.page + 1, debouncedSearch)}
                                 className="bg-transparent border-white/10 hover:bg-white/5"

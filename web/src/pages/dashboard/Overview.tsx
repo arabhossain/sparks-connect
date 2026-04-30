@@ -6,7 +6,7 @@ export function Overview() {
   const [stats, setStats] = useState({ totalHosts: 0, activeSessions: 0, teamMembers: 0 })
 
   useEffect(() => {
-    fetch('/api/stats', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })
+    fetch('/api/client/stats', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })
       .then(res => res.json())
       .then(data => setStats(data))
       .catch(console.error)

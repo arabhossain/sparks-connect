@@ -36,7 +36,7 @@ const ClientAuthController = {
             res.json({ token, user: { id, username, role: assignedRole, organizationId: assignedOrgId, permissions: permsObj } });
         } catch (err) {
             if (err.code === "ER_DUP_ENTRY") {
-                 return res.status(400).json({ error: "Username already exists" });
+                return res.status(400).json({ error: "Username already exists" });
             }
             console.error("Client register error:", err);
             res.status(500).json({ error: "Internal Error" });
@@ -57,7 +57,7 @@ const ClientAuthController = {
             if (!valid) {
                 return res.status(403).json({ error: "Invalid password" });
             }
-            
+
             if (user.isActive === 0) {
                 return res.status(403).json({ error: "Account deactivated" });
             }
@@ -99,7 +99,7 @@ const ClientAuthController = {
 
             const hash = await bcrypt.hash(newPassword, 10);
             await UserModel.updateUserPassword(req.user.id, hash);
-            
+
             res.json({ success: true });
         } catch (err) {
             res.status(500).json({ error: "Internal Error" });
@@ -108,7 +108,7 @@ const ClientAuthController = {
 
     updateOrganization: async (req, res) => {
         const { name } = req.body;
-        if (req.user.role !== 'organization_user') {
+        if (req.user.role !== 'organization_user' && req.user.role !== 'owner') {
             return res.status(403).json({ error: "Forbidden: Only organization owners can change the organization name" });
         }
         try {

@@ -45,7 +45,7 @@ export function Settings() {
     setIsOrgSubmitting(true)
     setOrgMessage('')
     try {
-      const res = await fetch('/api/auth/organization', {
+      const res = await fetch('/api/client/auth/organization', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({ name: orgName })
@@ -84,21 +84,21 @@ export function Settings() {
             <form onSubmit={handlePasswordChange} className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Current Password</label>
-                <Input 
-                  type="password" required 
-                  value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} 
-                  className="bg-black/40 border-white/10" 
+                <Input
+                  type="password" required
+                  value={currentPassword} onChange={e => setCurrentPassword(e.target.value)}
+                  className="bg-black/40 border-white/10"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">New Password</label>
-                <Input 
-                  type="password" required 
-                  value={newPassword} onChange={e => setNewPassword(e.target.value)} 
-                  className="bg-black/40 border-white/10" 
+                <Input
+                  type="password" required
+                  value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                  className="bg-black/40 border-white/10"
                 />
               </div>
-              
+
               {message && <p className="text-sm text-center text-muted-foreground pt-2">{message}</p>}
 
               <Button type="submit" disabled={isSubmitting} className="w-full bg-primary relative overflow-hidden group">
@@ -121,13 +121,13 @@ export function Settings() {
               <form onSubmit={handleOrgChange} className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Organization Name</label>
-                  <Input 
-                    type="text" required 
-                    value={orgName} onChange={e => setOrgName(e.target.value)} 
-                    className="bg-black/40 border-white/10" 
+                  <Input
+                    type="text" required
+                    value={orgName} onChange={e => setOrgName(e.target.value)}
+                    className="bg-black/40 border-white/10"
                   />
                 </div>
-                
+
                 {orgMessage && <p className="text-sm text-center text-muted-foreground pt-2">{orgMessage}</p>}
 
                 <Button type="submit" disabled={isOrgSubmitting} className="w-full bg-accent hover:bg-accent-light relative overflow-hidden group">

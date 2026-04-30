@@ -8,7 +8,7 @@ export function Sessions() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/sessions?status=active', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })
+    fetch('/api/client/sessions?status=active', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } })
       .then(res => res.json())
       .then(data => setSessions(data))
       .catch(console.error)
@@ -25,8 +25,8 @@ export function Sessions() {
       <div className="space-y-4">
         {loading ? (
           <div className="py-12 text-center border-2 border-dashed border-border rounded-xl">
-             <Terminal className="w-10 h-10 mx-auto text-muted-foreground mb-4 opacity-50 animate-pulse" />
-             <h3 className="text-lg font-medium">Loading sessions...</h3>
+            <Terminal className="w-10 h-10 mx-auto text-muted-foreground mb-4 opacity-50 animate-pulse" />
+            <h3 className="text-lg font-medium">Loading sessions...</h3>
           </div>
         ) : sessions.length === 0 ? (
           <div className="py-12 text-center border-2 border-dashed border-border rounded-xl">
@@ -47,16 +47,16 @@ export function Sessions() {
                 <CardContent>
                   <p className="text-sm font-medium">User: <span className="text-muted-foreground">{s.username}</span></p>
                   <div className="text-xs text-muted-foreground flex items-center mt-4">
-                     <Clock className="w-3.5 h-3.5 mr-1" />
-                     Started: {new Date(s.startedAt).toLocaleString()}
+                    <Clock className="w-3.5 h-3.5 mr-1" />
+                    Started: {new Date(s.startedAt).toLocaleString()}
                   </div>
                   <div className="mt-4 pt-4 border-t border-white/5 flex justify-end">
-                      <Link 
-                          to={`/mypage/logs/${s.id}`}
-                          className="bg-primary/10 hover:bg-primary/20 text-primary-light px-3 py-1.5 rounded-lg text-xs font-medium transition-colors inline-flex items-center"
-                      >
-                          <TerminalSquare className="w-3.5 h-3.5 mr-1.5" /> View Logs
-                      </Link>
+                    <Link
+                      to={`/mypage/logs/${s.id}`}
+                      className="bg-primary/10 hover:bg-primary/20 text-primary-light px-3 py-1.5 rounded-lg text-xs font-medium transition-colors inline-flex items-center"
+                    >
+                      <TerminalSquare className="w-3.5 h-3.5 mr-1.5" /> View Logs
+                    </Link>
                   </div>
                 </CardContent>
               </Card>
