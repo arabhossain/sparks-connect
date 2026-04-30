@@ -8,6 +8,7 @@ impl SSHCommandBuilder {
     pub fn new() -> Self {
         let mut cmd = CommandBuilder::new("ssh");
         cmd.arg("-tt");
+        cmd.env("TERM", "xterm-256color");
 
         Self { cmd }
     }

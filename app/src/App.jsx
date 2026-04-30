@@ -15,14 +15,27 @@ import { invoke } from "@tauri-apps/api/core";
 import logoImg from "./assets/logo.png";
 import { Toaster, toast } from "react-hot-toast";
 
+import { VaultProvider, useVault } from "./components/VaultProvider";
+import VaultUnlockModal from "./features/vault/VaultUnlockModal";
+import SnippetsPanel from "./features/snippets/SnippetsPanel";
+import WorkspacesPanel from "./features/workspaces/WorkspacesPanel";
+
 import "./styles/global.css";
 import "./styles/tabs.css";
 import "./styles/login.css";
 
-const API = "https://sparkconnect.codesparks.me";
+import { API } from "./config";
 
 export default function App() {
     const [token, setToken] = useState(localStorage.getItem("token"));
+    return (
+        <VaultProvider token={token}>
+            <MainApp token={token} setToken={setToken} />
+        </VaultProvider>
+    );
+}
+
+function MainApp({ token, setToken }) {
     const [mode, setMode] = useState("login");
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -39,6 +52,49 @@ export default function App() {
     const [layout, setLayout] = useState("single");
     const [confirmDelete, setConfirmDelete] = useState(null);
     const [paletteOpen, setPaletteOpen] = useState(false);
+
+    const { isUnlocked } = useVault();
+    const [showSnippets, setShowSnippets] = useState(false);
+    const [showWorkspaces, setShowWorkspaces] = useState(false);
+    const [showVaultUnlock, setShowVaultUnlock] = useState(false);
+
+    const handleOpenSnippets = () => {
+        if (!isUnlocked) setShowVaultUnlock(true);
+        setShowSnippets(true);
+    };
+
+    const handleOpenWorkspaces = () => {
+        if (!isUnlocked) setShowVaultUnlock(true);
+        setShowWorkspaces(true);
+    };
+
+    const handleRestoreWorkspace = async (workspace, keepExisting = false) => {
+        // 1. Clean up existing sessions if requested
+        if (!keepExisting) {
+            sessions.forEach(s => {
+                fetch(API + "/telemetry/session", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+                    body: JSON.stringify({ hostId: s.host.id, status: 'inactive' })
+                }).catch(() => { });
+                invoke("ssh_disconnect", { sessionId: s.id });
+            });
+            
+            setSessions([]);
+            setActiveSession(null);
+            setVisibleSessions([]);
+        }
+
+        setLayout(workspace.layout);
+
+        // 2. Open saved sessions with the new layout explicitly
+        for (const s of workspace.sessions) {
+            const h = hosts.find(host => host.id === s.hostId);
+            if (h) {
+                await openSession(h, workspace.layout);
+            }
+        }
+    };
 
     useEffect(() => {
         const handleKeys = (e) => {
@@ -117,14 +173,16 @@ export default function App() {
         };
     };
 
-    const openSession = async (host) => {
+    const openSession = async (host, overrideLayout = null) => {
         const id = crypto.randomUUID();
         const loadingToast = notify.loading(`Connecting to ${host.host}...`);
         const newSession = { id, host, connected: false, reconnecting: true };
         setSessions(prev => [...prev, newSession]);
         setActiveSession(id);
+        
+        const activeLayout = overrideLayout || layout;
         setVisibleSessions(prev => {
-            if (layout === "single") return [id];
+            if (activeLayout === "single") return [id];
             if (prev.length >= 2) return [prev[1], id];
             return [...prev, id];
         });
@@ -156,13 +214,13 @@ export default function App() {
                 headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
                 body: JSON.stringify({ hostId: host.id, status: 'active' })
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data && data.id) {
-                    setSessions(prev => prev.map(s => s.id === id ? { ...s, serverId: data.id } : s));
-                }
-            })
-            .catch(e => console.error("Telemetry session error", e));
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.id) {
+                        setSessions(prev => prev.map(s => s.id === id ? { ...s, serverId: data.id } : s));
+                    }
+                })
+                .catch(e => console.error("Telemetry session error", e));
         } catch (err) {
             notify.dismiss(loadingToast);
             notify.error(`Failed to connect: ${host.host}`);
@@ -225,7 +283,7 @@ export default function App() {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
                 body: JSON.stringify({ hostId: s.host.id, status: 'inactive' })
-            }).catch(() => {});
+            }).catch(() => { });
             invoke("ssh_disconnect", { sessionId: s.id });
         });
         setSessions(prev => {
@@ -243,7 +301,7 @@ export default function App() {
                     method: "POST",
                     headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
                     body: JSON.stringify({ hostId: s.host.id, status: 'inactive' })
-                }).catch(() => {});
+                }).catch(() => { });
                 invoke("ssh_disconnect", { sessionId: s.id });
             });
             setSessions([]);
@@ -256,7 +314,7 @@ export default function App() {
                     method: "POST",
                     headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
                     body: JSON.stringify({ hostId: s.host.id, status: 'inactive' })
-                }).catch(() => {});
+                }).catch(() => { });
                 invoke("ssh_disconnect", { sessionId: s.id });
             });
             setSessions(sessions.filter(s => s.id === id));
@@ -270,7 +328,7 @@ export default function App() {
                     method: "POST",
                     headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
                     body: JSON.stringify({ hostId: s.host.id, status: 'inactive' })
-                }).catch(() => {});
+                }).catch(() => { });
                 invoke("ssh_disconnect", { sessionId: s.id });
             });
             const remaining = sessions.slice(0, idx + 1);
@@ -285,7 +343,7 @@ export default function App() {
                     method: "POST",
                     headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
                     body: JSON.stringify({ hostId: s.host.id, status: 'inactive' })
-                }).catch(() => {});
+                }).catch(() => { });
                 invoke("ssh_disconnect", { sessionId: s.id });
             });
             const remaining = sessions.slice(idx);
@@ -534,6 +592,8 @@ export default function App() {
                 onCreateGroup={createGroup}
                 onDeleteGroup={deleteGroup}
                 onRefresh={handleRefresh}
+                onOpenSnippets={handleOpenSnippets}
+                onOpenWorkspaces={handleOpenWorkspaces}
             />
             <div className="resize-handle" onMouseDown={startResizing} />
             <main className="main-content">
@@ -583,6 +643,25 @@ export default function App() {
                 onAdd={() => setModalOpen(true)}
                 onLogout={logout}
             />
+
+            {showVaultUnlock && <VaultUnlockModal onClose={() => setShowVaultUnlock(false)} />}
+
+            <AnimatePresence>
+                {showSnippets && isUnlocked && (
+                    <SnippetsPanel
+                        activeSessionId={activeSession}
+                        onClose={() => setShowSnippets(false)}
+                    />
+                )}
+                {showWorkspaces && isUnlocked && (
+                    <WorkspacesPanel
+                        onClose={() => setShowWorkspaces(false)}
+                        currentSessions={sessions}
+                        currentLayout={layout}
+                        onRestoreWorkspace={handleRestoreWorkspace}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }

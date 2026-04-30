@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { FiSearch, FiPlus, FiTrash2, FiEdit2, FiTerminal, FiKey, FiUser, FiX, FiFolderPlus, FiCheck, FiRefreshCw, FiLogOut } from "react-icons/fi";
+import { FiSearch, FiPlus, FiTrash2, FiEdit2, FiTerminal, FiKey, FiUser, FiX, FiFolderPlus, FiCheck, FiRefreshCw, FiLogOut, FiCode, FiLayout } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 import { DndContext, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
@@ -70,7 +70,9 @@ export default function Sidebar({
     groups = [],
     onCreateGroup,
     onDeleteGroup,
-    onRefresh
+    onRefresh,
+    onOpenSnippets,
+    onOpenWorkspaces
 }) {
     const [search, setSearch] = useState("");
     const [collapsedFolders, setCollapsedFolders] = useState({});
@@ -189,6 +191,14 @@ export default function Sidebar({
                         <FiFolderPlus size={16} /> Group
                     </button>
                 </div>
+                <div className="sidebar-actions" style={{ marginTop: '8px' }}>
+                    <button onClick={onOpenSnippets} className="sidebar-btn secondary-btn" style={{ flex: 1 }}>
+                        <FiCode size={14} style={{ marginRight: '4px' }} /> Snippets
+                    </button>
+                    <button onClick={onOpenWorkspaces} className="sidebar-btn secondary-btn" style={{ flex: 1 }}>
+                        <FiLayout size={14} style={{ marginRight: '4px' }} /> Workspaces
+                    </button>
+                </div>
             </div>
 
             <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
@@ -211,6 +221,7 @@ export default function Sidebar({
                     )}
 
                     {Object.entries(groupedData)
+                        .filter(([name, data]) => !(name === "Ungrouped" && data.hosts.length === 0))
                         .sort(([nameA], [nameB]) => {
                             if (nameA === "Ungrouped") return -1;
                             if (nameB === "Ungrouped") return 1;

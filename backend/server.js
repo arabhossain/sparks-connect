@@ -7,6 +7,7 @@ const hostRoutes = require("./routes/hosts");
 const groupRoutes = require("./routes/groups");
 const clientRoutes = require("./routes/client");
 const telemetryRoutes = require("./routes/telemetry");
+const vaultRoutes = require("./routes/vault");
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use("/hosts", hostRoutes);
 app.use("/groups", groupRoutes);
 app.use("/client", clientRoutes);
 app.use("/telemetry", telemetryRoutes);
+app.use("/vault", vaultRoutes);
 
 app.listen(4000, () => {
     console.log("🚀  API running on 4000");

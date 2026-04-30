@@ -43,7 +43,7 @@ function copyFiles(sourceDir, destDir, extensions) {
                     }
 
                     const destPath = path.join(destDir, finalName);
-                    console.log(`🚀 Deploying: ${item} -> ${finalName}`);
+                    console.log(`Deploying: ${item} -> ${finalName}`);
                     fs.copyFileSync(fullPath, destPath);
                     break;
                 }
@@ -65,7 +65,7 @@ async function runDeploy() {
     copyFiles(TARGET_DIR, path.join(PUBLIC_DIR, 'windows'), PLATFORMS.windows);
     copyFiles(TARGET_DIR, path.join(PUBLIC_DIR, 'linux'), PLATFORMS.linux);
 
-    console.log("✅ All compiled binaries have been successfully published to the Download Center.");
+    console.log("All compiled binaries have been successfully published to the Download Center.");
 }
 
 runDeploy();

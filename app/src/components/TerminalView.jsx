@@ -18,6 +18,8 @@ export default function TerminalView({ session, isVisible = true }) {
     }, [session]);
 
     const [menu, setMenu] = useState(null);
+    const [showOverlay, setShowOverlay] = useState(true);
+    const isConnectingRef = useRef(true);
 
     useEffect(() => {
         if (!session?.id) return;
@@ -26,6 +28,7 @@ export default function TerminalView({ session, isVisible = true }) {
             cursorBlink: true,
             convertEol: true,
             fontSize: 14,
+            lineHeight: 1.2,
             fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
             theme: {
                 background: "#0a0b10", // Match var(--bg-primary)
@@ -67,6 +70,10 @@ export default function TerminalView({ session, isVisible = true }) {
         let unlistenFn;
 
         listen(eventName, (e) => {
+            if (isConnectingRef.current) {
+                isConnectingRef.current = false;
+                setShowOverlay(false);
+            }
             term.write(e.payload);
         }).then((unlisten) => {
             unlistenFn = unlisten;
@@ -76,6 +83,8 @@ export default function TerminalView({ session, isVisible = true }) {
 
         // Send keyboard input to backend
         term.onData((data) => {
+            if (isConnectingRef.current) return; // Block input while connecting
+
             invoke("ssh_write", {
                 sessionId: session.id,
                 input: data,
@@ -117,6 +126,7 @@ export default function TerminalView({ session, isVisible = true }) {
         // Use ResizeObserver for more robust resizing
         const resizeObserver = new ResizeObserver(() => {
             if (isVisible && term.element && ref.current) {
+                if (ref.current.clientWidth < 10 || ref.current.clientHeight < 10) return;
                 try {
                     fitAddon.fit();
                     invoke("ssh_resize", {
@@ -145,6 +155,7 @@ export default function TerminalView({ session, isVisible = true }) {
     useEffect(() => {
         if (isVisible && termInstance.current && fitAddonRef.current) {
             setTimeout(() => {
+                if (ref.current && (ref.current.clientWidth < 10 || ref.current.clientHeight < 10)) return;
                 try {
                     fitAddonRef.current.fit();
                     termInstance.current.focus();
@@ -232,6 +243,12 @@ export default function TerminalView({ session, isVisible = true }) {
             <div className="terminal-window-wrapper">
                 <div className="terminal-window">
                     <div className="terminal-content">
+                        {showOverlay && (
+                            <div className="terminal-loading-overlay">
+                                <div className="terminal-spinner"></div>
+                                <span>Establishing secure connection...</span>
+                            </div>
+                        )}
                         <div
                             ref={ref}
                             style={{ width: "100%", height: "100%" }}

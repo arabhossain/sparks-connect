@@ -47,6 +47,17 @@ struct SSHOptions {
     identities_only: Option<bool>,
 }
 
+#[cfg(unix)]
+fn set_secure_permissions(path: &str) {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)).ok();
+}
+
+#[cfg(windows)]
+fn set_secure_permissions(_path: &str) {
+    // Windows permissions handling omitted for minimal logic
+}
+
 #[tauri::command]
 fn ssh_connect(
     app: tauri::AppHandle,
@@ -106,8 +117,7 @@ fn ssh_connect(
             let path = format!("/tmp/jump_key_{}", session_id);
             std::fs::write(&path, key).map_err(|e| e.to_string())?;
 
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).ok();
+            set_secure_permissions(&path);
 
             temp_files.push(path.clone());
             jump_key_path = Some(path);
@@ -161,8 +171,7 @@ fn ssh_connect(
         let path = format!("/tmp/key_{}", session_id);
         std::fs::write(&path, key).map_err(|e| e.to_string())?;
 
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).ok();
+        set_secure_permissions(&path);
 
         temp_files.push(path.clone());
 
