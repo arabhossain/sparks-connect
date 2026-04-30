@@ -5,12 +5,15 @@ const StatsModel = {
         const [[hostsRes]] = await db.query("SELECT COUNT(*) as c FROM hosts WHERE ownerId IN (SELECT ownerId FROM organizations WHERE id = ?)", [orgId]);
         return hostsRes.c;
     },
-    getActiveSessionCount: async () => {
-        const [[sessionsRes]] = await db.query("SELECT COUNT(*) as c FROM active_sessions WHERE status = 'active'");
+    getOrgActiveSessionCount: async (orgId) => {
+        const [[sessionsRes]] = await db.query(
+            "SELECT COUNT(*) as c FROM active_sessions s JOIN users u ON s.userId = u.id WHERE s.status = 'active' AND u.organizationId = ?", 
+            [orgId]
+        );
         return sessionsRes.c;
     },
     getOrgTeamMemberCount: async (orgId) => {
-        const [[teamRes]] = await db.query("SELECT COUNT(*) as c FROM users WHERE organizationId = ?", [orgId]);
+        const [[teamRes]] = await db.query("SELECT COUNT(*) as c FROM users WHERE organizationId = ? AND role = 'team_mate'", [orgId]);
         return teamRes.c;
     },
     getTeammateHostCount: async (userId) => {

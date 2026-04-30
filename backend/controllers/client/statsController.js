@@ -13,7 +13,7 @@ const ClientStatsController = {
 
             if (userRole === 'organization_user' && orgId) {
                 totalHosts = await StatsModel.getOrgHostCount(orgId);
-                activeSessions = await StatsModel.getActiveSessionCount();
+                activeSessions = await StatsModel.getOrgActiveSessionCount(orgId);
                 teamMembers = await StatsModel.getOrgTeamMemberCount(orgId);
             } else if (userRole === 'team_mate' && orgId) {
                 totalHosts = await StatsModel.getTeammateHostCount(userId);

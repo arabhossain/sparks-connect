@@ -13,7 +13,7 @@ app.use(
         target: BACKEND_URL,
         changeOrigin: true,
         pathRewrite: {
-            "^/api": "/client", // Rewrite /api to /client
+            "^/api": "",
         },
     })
 );
