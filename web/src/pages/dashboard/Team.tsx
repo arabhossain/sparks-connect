@@ -55,7 +55,7 @@ export function Team() {
     setIsInviting(true);
     setInviteMessage({});
     try {
-      const res = await fetch('/api/team', {
+      const res = await fetch('/api/client/team', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({ email: inviteEmail })
@@ -79,7 +79,7 @@ export function Team() {
     e.preventDefault();
     if (!newGroupName) return;
     try {
-      const res = await fetch('/api/team-groups', {
+      const res = await fetch('/api/client/team-groups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({ name: newGroupName, members: [], hosts: [] })
@@ -96,7 +96,7 @@ export function Team() {
   const handleDeleteGroup = async (id: string) => {
     if (!confirm('Delete group?')) return;
     try {
-      await fetch(`/api/team-groups/${id}`, {
+      await fetch(`/api/client/team-groups/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
@@ -106,7 +106,7 @@ export function Team() {
 
   const handleUpdateGroup = async (id: string, name: string, members: string[], hosts: string[]) => {
     try {
-      await fetch(`/api/team-groups/${id}`, {
+      await fetch(`/api/client/team-groups/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({ name, members, hosts })
@@ -118,7 +118,7 @@ export function Team() {
   const handlePermissionToggle = async (key: string, checked: boolean) => {
     if (!activeMember) return;
     const newPerms = { ...activeMember.permissions, [key]: checked };
-    const res = await fetch(`/api/team/${activeMember.id}/permissions`, {
+    const res = await fetch(`/api/client/team/${activeMember.id}/permissions`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       body: JSON.stringify({ permissions: newPerms })
@@ -132,7 +132,7 @@ export function Team() {
   const handleStatusToggle = async () => {
     if (!activeMember) return;
     const newStatus = activeMember.status === 'Active' ? 'Inactive' : 'Active';
-    const res = await fetch(`/api/team/${activeMember.id}/status`, {
+    const res = await fetch(`/api/client/team/${activeMember.id}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
       body: JSON.stringify({ isActive: newStatus === 'Active' })
@@ -146,7 +146,7 @@ export function Team() {
   const handleDeleteMember = async () => {
     if (!activeMember) return;
     if (!confirm("Are you sure you want to permanently delete this member?")) return;
-    const res = await fetch(`/api/team/${activeMember.id}`, {
+    const res = await fetch(`/api/client/team/${activeMember.id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     });
